@@ -1,12 +1,59 @@
-"""Board-specific code templates for firmware generation."""
+"""Board-specific code templates for firmware generation.
+
+Templates use {{PLACEHOLDER}} syntax for values injected at flash time:
+- {{WIFI_SSID}} - WiFi network name
+- {{WIFI_PASSWORD}} - WiFi password
+- {{SERVER_URL}} - Aggregation server HTTP endpoint
+- {{MQTT_BROKER}} - MQTT broker hostname/IP
+- {{MQTT_PORT}} - MQTT broker port
+- {{NODE_ID}} - Unique node identifier
+- {{SWARM_ID}} - Swarm/project identifier
+"""
+
+from dataclasses import dataclass, field
+
+
+@dataclass
+class DeployConfig:
+    """Configuration injected into firmware at flash time."""
+    wifi_ssid: str = "Wokwi-GUEST"
+    wifi_password: str = ""
+    server_url: str = "http://localhost:8080"
+    mqtt_broker: str = "broker.hivemq.com"
+    mqtt_port: int = 1883
+    node_id: str = "node_1"
+    swarm_id: str = "swarm_1"
+
+    def as_dict(self) -> dict[str, str]:
+        return {
+            "WIFI_SSID": self.wifi_ssid,
+            "WIFI_PASSWORD": self.wifi_password,
+            "SERVER_URL": self.server_url,
+            "MQTT_BROKER": self.mqtt_broker,
+            "MQTT_PORT": str(self.mqtt_port),
+            "NODE_ID": self.node_id,
+            "SWARM_ID": self.swarm_id,
+        }
+
+
+def inject_config(template: str, config: DeployConfig) -> str:
+    """Replace {{PLACEHOLDER}} tokens with actual values."""
+    result = template
+    for key, value in config.as_dict().items():
+        result = result.replace("{{" + key + "}}", value)
+    return result
+
 
 # ESP32 with WiFi + HTTP
 ESP32_HTTP_TEMPLATE = '''
 #include <WiFi.h>
 #include <HTTPClient.h>
 
-const char* WIFI_SSID = "Wokwi-GUEST";
-const char* WIFI_PASSWORD = "";
+const char* WIFI_SSID = "{{WIFI_SSID}}";
+const char* WIFI_PASSWORD = "{{WIFI_PASSWORD}}";
+const char* SERVER_URL = "{{SERVER_URL}}";
+const char* NODE_ID = "{{NODE_ID}}";
+const char* SWARM_ID = "{{SWARM_ID}}";
 
 void setup_wifi() {{
     Serial.print("Connecting to WiFi");
@@ -23,6 +70,20 @@ void setup_wifi() {{
         Serial.println(WiFi.localIP());
     }} else {{
         Serial.println(" failed!");
+    }}
+}}
+
+void post_telemetry(const char* json_payload) {{
+    if (WiFi.status() == WL_CONNECTED) {{
+        HTTPClient http;
+        char url[128];
+        snprintf(url, 128, "%s/api/telemetry/%s", SERVER_URL, NODE_ID);
+        http.begin(url);
+        http.addHeader("Content-Type", "application/json");
+        http.addHeader("X-Swarm-ID", SWARM_ID);
+        int code = http.POST(json_payload);
+        Serial.printf("POST %s -> %d\\n", url, code);
+        http.end();
     }}
 }}
 
@@ -56,11 +117,15 @@ ESP32_MQTT_TEMPLATE = '''
 #include <WiFi.h>
 #include <PubSubClient.h>
 
-const char* WIFI_SSID = "Wokwi-GUEST";
-const char* WIFI_PASSWORD = "";
-const char* MQTT_BROKER = "broker.hivemq.com";
-const int MQTT_PORT = 1883;
+const char* WIFI_SSID = "{{WIFI_SSID}}";
+const char* WIFI_PASSWORD = "{{WIFI_PASSWORD}}";
+const char* MQTT_BROKER = "{{MQTT_BROKER}}";
+const int MQTT_PORT = {{MQTT_PORT}};
+const char* NODE_ID = "{{NODE_ID}}";
+const char* SWARM_ID = "{{SWARM_ID}}";
 char MQTT_CLIENT_ID[32];
+char TELEMETRY_TOPIC[64];
+char COMMAND_TOPIC[64];
 
 WiFiClient espClient;
 PubSubClient mqtt(espClient);
@@ -81,7 +146,10 @@ void setup_wifi() {{
         // Generate unique client ID from MAC
         uint8_t mac[6];
         WiFi.macAddress(mac);
-        snprintf(MQTT_CLIENT_ID, 32, "esp32_%02x%02x%02x", mac[3], mac[4], mac[5]);
+        snprintf(MQTT_CLIENT_ID, 32, "%s_%02x%02x%02x", NODE_ID, mac[3], mac[4], mac[5]);
+        // Setup standard topics
+        snprintf(TELEMETRY_TOPIC, 64, "swarm/%s/nodes/%s/telemetry", SWARM_ID, NODE_ID);
+        snprintf(COMMAND_TOPIC, 64, "swarm/%s/nodes/%s/command", SWARM_ID, NODE_ID);
     }} else {{
         Serial.println(" failed!");
     }}
@@ -97,6 +165,9 @@ bool mqtt_connect() {{
         Serial.print("Connecting to MQTT...");
         if (mqtt.connect(MQTT_CLIENT_ID)) {{
             Serial.println(" connected!");
+            // Auto-subscribe to command topic
+            mqtt.subscribe(COMMAND_TOPIC);
+            Serial.printf("Subscribed to %s\\n", COMMAND_TOPIC);
             return true;
         }} else {{
             Serial.printf(" failed (rc=%d)\\n", mqtt.state());
@@ -104,6 +175,13 @@ bool mqtt_connect() {{
         }}
     }}
     return true;
+}}
+
+void publish_telemetry(const char* json_payload) {{
+    if (mqtt_connect()) {{
+        mqtt.publish(TELEMETRY_TOPIC, json_payload);
+        Serial.printf("Published to %s\\n", TELEMETRY_TOPIC);
+    }}
 }}
 
 void mqtt_publish(const char* topic, const char* payload) {{
