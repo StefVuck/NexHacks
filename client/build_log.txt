@@ -1,0 +1,29 @@
+
+> ilp-visualizer@0.0.0 build
+> vite build
+
+vite v7.2.4 building client environment for production...
+transforming...
+✓ 1819 modules transformed.
+✗ Build failed in 894ms
+error during build:
+src/App.jsx (3:7): "default" is not exported by "src/components/DispatchForm.jsx", imported by "src/App.jsx".
+file: /Users/akshatthapa/Desktop/University/Third Year/Informatic Large Practical/ILPCW2/ilp-visualizer/src/App.jsx:3:7
+
+1: import React, { useState } from 'react';
+2: import Map from './components/Map';
+3: import DispatchForm from './components/DispatchForm';
+          ^
+4: import DronePanel from './components/DronePanel';
+5: import DeliveryProgressPanel from './components/DeliveryProgressPanel';
+
+    at getRollupError (file:///Users/akshatthapa/Desktop/University/Third%20Year/Informatic%20Large%20Practical/ILPCW2/ilp-visualizer/node_modules/rollup/dist/es/shared/parseAst.js:401:41)
+    at error (file:///Users/akshatthapa/Desktop/University/Third%20Year/Informatic%20Large%20Practical/ILPCW2/ilp-visualizer/node_modules/rollup/dist/es/shared/parseAst.js:397:42)
+    at Module.error (file:///Users/akshatthapa/Desktop/University/Third%20Year/Informatic%20Large%20Practical/ILPCW2/ilp-visualizer/node_modules/rollup/dist/es/shared/node-entry.js:16956:16)
+    at Module.traceVariable (file:///Users/akshatthapa/Desktop/University/Third%20Year/Informatic%20Large%20Practical/ILPCW2/ilp-visualizer/node_modules/rollup/dist/es/shared/node-entry.js:17412:29)
+    at ModuleScope.findVariable (file:///Users/akshatthapa/Desktop/University/Third%20Year/Informatic%20Large%20Practical/ILPCW2/ilp-visualizer/node_modules/rollup/dist/es/shared/node-entry.js:15076:39)
+    at FunctionScope.findVariable (file:///Users/akshatthapa/Desktop/University/Third%20Year/Informatic%20Large%20Practical/ILPCW2/ilp-visualizer/node_modules/rollup/dist/es/shared/node-entry.js:5649:38)
+    at FunctionBodyScope.findVariable (file:///Users/akshatthapa/Desktop/University/Third%20Year/Informatic%20Large%20Practical/ILPCW2/ilp-visualizer/node_modules/rollup/dist/es/shared/node-entry.js:5649:38)
+    at Identifier.bind (file:///Users/akshatthapa/Desktop/University/Third%20Year/Informatic%20Large%20Practical/ILPCW2/ilp-visualizer/node_modules/rollup/dist/es/shared/node-entry.js:5423:40)
+    at CallExpression.bind (file:///Users/akshatthapa/Desktop/University/Third%20Year/Informatic%20Large%20Practical/ILPCW2/ilp-visualizer/node_modules/rollup/dist/es/shared/node-entry.js:2809:28)
+    at CallExpression.bind (file:///Users/akshatthapa/Desktop/University/Third%20Year/Informatic%20Large%20Practical/ILPCW2/ilp-visualizer/node_modules/rollup/dist/es/shared/node-entry.js:12123:15)
