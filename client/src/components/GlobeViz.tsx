@@ -49,7 +49,7 @@ const GlobeViz: React.FC<GlobeProps> = ({ width, height }) => {
             controls.enableZoom = false;
             controls.enablePan = false;
             controls.enableRotate = false;
-            globeEl.current.pointOfView({ altitude: 2.5 });
+            globeEl.current.pointOfView({ altitude: 3.2 });
         }
     }, [width]); // Re-apply when width changes/re-renders
 

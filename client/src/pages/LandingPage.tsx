@@ -64,64 +64,23 @@ const LandingPage = () => {
             </nav>
 
             {/* Hero Section */}
-            <main className="relative z-10 flex flex-col items-center justify-end h-screen px-4 pb-0 text-center pointer-events-none w-full max-w-[100vw] overflow-hidden">
+            <main className="relative z-10 flex flex-col items-center justify-end h-[calc(100vh-88px)] px-4 pb-0 text-center pointer-events-none w-full max-w-[100vw] overflow-hidden">
 
                 {/* Upper Content - Terminal & Description */}
                 <div className="flex-1 flex flex-col items-center justify-center w-full max-w-4xl mx-auto mb-10">
-                    <div className="pointer-events-auto w-full flex flex-col items-center gap-8">
-                        {/* System Status */}
-                        <div className="flex items-center justify-center gap-2 text-blue-500/80 text-xs font-mono uppercase tracking-[0.2em] px-3 py-1">
-                            <div className="flex items-center gap-2 border border-blue-500/20 px-3 py-1 bg-blue-500/5 backdrop-blur-md">
-                                <Activity className="w-3 h-3" />
-                                <span>System Operational</span>
-                            </div>
-                        </div>
-
-                        <motion.p
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ delay: 0.4, duration: 0.8 }}
-                            className="text-gray-400 max-w-xl text-lg leading-relaxed mx-auto drop-shadow-md text-center"
-                        >
-                            Deploy complex embedded swarms using plain English.
-                            From generative firmware to verified simulation in seconds.
-                        </motion.p>
-
-                        {/* Interactive Terminal Input */}
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ delay: 0.6 }}
-                            className="w-full max-w-xl relative group pointer-events-auto"
-                        >
-                            <div className="absolute -inset-1 bg-gradient-to-r from-blue-600/20 to-purple-600/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                            <div className="relative flex items-center bg-[#0a0a0a]/90 border border-white/10 p-4 shadow-2xl backdrop-blur-xl">
-                                <Terminal className="w-5 h-5 text-gray-500 mr-3" />
-                                <span className="text-gray-500 mr-2 text-sm select-none">{'>'}</span>
-                                <div className="flex-1 font-mono text-sm text-gray-300 bg-transparent outline-none text-left">
-                                    {typedText}<span className="animate-pulse">_</span>
-                                </div>
-                                <button
-                                    onClick={() => navigate('/app')}
-                                    className="ml-4 px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold tracking-wide uppercase transition-colors"
-                                >
-                                    Execute
-                                </button>
-                            </div>
-                        </motion.div>
-                    </div>
                 </div>
-
-                {/* Big Title at Bottom */}
+                {/* Vertical Title on Left */}
                 <motion.div
-                    initial={{ opacity: 0, y: 100 }}
-                    animate={{ opacity: 1, y: 0 }}
+                    initial={{ opacity: 0, x: -50 }}
+                    animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 1, ease: "easeOut" }}
-                    className="w-full relative z-0 pointer-events-none select-none"
+                    className="absolute left-8 top-0 h-full z-20 pointer-events-none select-none flex flex-col items-center justify-between py-12"
                 >
-                    <h1 className="text-[18vw] leading-[0.8] font-bold tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white/80 to-white/20 mix-blend-overlay">
-                        HELIOS
-                    </h1>
+                    {['H', 'E', 'L', 'I', 'O', 'S'].map((char, i) => (
+                        <h1 key={i} className="text-[13vh] leading-none font-bold text-transparent bg-clip-text bg-gradient-to-b from-white to-white/40 drop-shadow-lg">
+                            {char}
+                        </h1>
+                    ))}
                 </motion.div>
             </main>
 
