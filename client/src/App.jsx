@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Map from './components/Map';
 import DispatchForm from './components/DispatchForm';
 import DronePanel from './components/DronePanel';
 import DeliveryProgressPanel from './components/DeliveryProgressPanel';
 import SaveRouteModal from './components/SaveRouteModal';
 import SavedRoutesPanel from './components/SavedRoutesPanel';
+import LandingPage from './pages/LandingPage';
 import { calcDeliveryPath as calculateRoute } from './services/cw2Api';
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -14,8 +16,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 import { getServicePoints, getRestrictedAreas, getDrones } from './services/ilpApi';
 
-
-function App() {
+function DroneApp() {
   const [dispatches, setDispatches] = useState([]);
   const [flightPath, setFlightPath] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -92,8 +93,6 @@ function App() {
     setDispatches(route.dispatches);
     setIsRouteCalculated(true);
     setCurrentRouteId(route.id);
-    // If we are viewing a saved route, we might want to clear the "previous" path if it's not the comparison one
-    // But let's keep it simple.
   };
 
   const handleCompareRoute = (route) => {
@@ -186,15 +185,6 @@ function App() {
 
   const handleCancelRoute = () => {
     setIsRouteCalculated(false);
-    // Don't clear flightPath immediately if we want to keep it for comparison?
-    // Actually, the requirement says "After a path is calculated... When user reorders and recalculates".
-    // So if they cancel, they go back to the form. `flightPath` is set to null in `handleCancelRoute` usually.
-    // But I need to keep `previousFlightPath` or `flightPath` somewhere to compare.
-    // If I set `flightPath` to null, I lose the current result.
-    // But `handleCalculateRoute` logic above sets `previousFlightPath` to `flightPath` before overwriting.
-    // So if I cancel, `flightPath` becomes null. Then next calc, `previousFlightPath` will be null.
-    // I should NOT clear `flightPath` completely or I should store it in `previousFlightPath` when cancelling?
-    // Let's store it in `previousFlightPath` when cancelling so we can compare the NEXT run against this one.
     if (flightPath) {
       setPreviousFlightPath(flightPath);
     }
@@ -395,6 +385,17 @@ function App() {
         defaultName={`Route ${savedRoutes.length + 1}`}
       />
     </div>
+  );
+}
+
+function App() {
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/app" element={<DroneApp />} />
+      </Routes>
+    </Router>
   );
 }
 
