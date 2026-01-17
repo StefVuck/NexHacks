@@ -17,9 +17,9 @@ const MapComponent = ({ theme = 'dark' }) => {
             <Map
                 ref={mapRef}
                 initialViewState={{
-                    longitude: -3.188,
-                    latitude: 55.944,
-                    zoom: 13
+                    longitude: -79.9428,
+                    latitude: 40.4432,
+                    zoom: 16.5
                 }}
                 style={{ width: '100%', height: '100%' }}
                 mapStyle={theme === 'dark' ? MAP_STYLE_DARK : MAP_STYLE_LIGHT}

@@ -45,7 +45,10 @@ const LandingPage = () => {
                 <div className="flex items-center gap-6 text-sm font-medium text-gray-400">
                     <a href="#" className="hover:text-white transition-colors">Documentation</a>
                     <a href="#" className="hover:text-white transition-colors">Mission</a>
-                    <button className="px-4 py-2 bg-white/5 hover:bg-white/10 text-white border border-white/10 transition-all flex items-center gap-2">
+                    <button
+                        onClick={() => navigate('/app')}
+                        className="px-4 py-2 bg-white/5 hover:bg-white/10 text-white border border-white/10 transition-all flex items-center gap-2"
+                    >
                         <span>Deploy</span>
                         <ChevronRight className="w-4 h-4" />
                     </button>
