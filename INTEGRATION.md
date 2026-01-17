@@ -193,17 +193,127 @@ spec = SystemSpec(
 
 Note: Currently nodes run independently. Inter-node communication (CAN, UART bridge) is a stretch goal.
 
+## ESP32 Simulation with Wokwi
+
+For ESP32 boards, we use [Wokwi](https://wokwi.com) which provides:
+- Full WiFi simulation (connects to real internet)
+- MQTT support (connects to real brokers)
+- Sensor simulation (DHT22, etc.)
+- Visual circuit diagrams
+
+### Setup
+
+```bash
+# Install PlatformIO
+pip install platformio
+
+# Get Wokwi token from https://wokwi.com/dashboard/ci
+export WOKWI_CLI_TOKEN=your-token-here
+```
+
+### ESP32 API
+
+```python
+from agent.esp32_orchestrator import (
+    ESP32GenerationLoop,
+    ESP32NodeSpec,
+    ESP32SystemSpec,
+    TestAssertion,
+)
+
+spec = ESP32SystemSpec(
+    description="IoT sensor network",
+    board_id="esp32",
+    mqtt_broker="broker.hivemq.com",
+    nodes=[
+        ESP32NodeSpec(
+            node_id="sensor_1",
+            description="Temperature sensor publishing to MQTT",
+            features=["wifi", "mqtt", "dht"],
+            mqtt_topics=["swarm/sensors/temp"],
+            assertions=[
+                TestAssertion(name="connected", pattern="connected!"),
+                TestAssertion(name="publishing", pattern="Published"),
+            ],
+        ),
+    ],
+)
+
+loop = ESP32GenerationLoop()
+results = await loop.run(spec)
+```
+
+### Available Features
+
+| Feature | Description | Template Provided |
+|---------|-------------|-------------------|
+| `wifi` | WiFi connection with `setup_wifi()` | Yes |
+| `http` | HTTP client with `http_get()`, `http_post()` | Yes |
+| `mqtt` | MQTT client with `mqtt_publish()`, `mqtt_subscribe()` | Yes |
+| `dht` | DHT22 sensor with `read_temperature()`, `read_humidity()` | Yes |
+
+### Circuit Generation
+
+Circuits are auto-generated based on features:
+
+```python
+from simulator.wokwi import generate_esp32_circuit
+
+# Creates ESP32 with DHT22 sensor and green LED
+circuit = generate_esp32_circuit(
+    sensors=["dht22"],
+    leds=["green"],
+)
+```
+
+### Multi-Node Architecture
+
+For simulating a network of ESP32s communicating with a server:
+
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│  ESP32 #1   │     │  ESP32 #2   │     │  ESP32 #3   │
+│  (Sensor)   │     │  (Sensor)   │     │  (Sensor)   │
+└──────┬──────┘     └──────┬──────┘     └──────┬──────┘
+       │                   │                   │
+       │ MQTT publish      │ MQTT publish      │ MQTT publish
+       ▼                   ▼                   ▼
+┌──────────────────────────────────────────────────────┐
+│                   MQTT Broker                        │
+│              (broker.hivemq.com)                     │
+└──────────────────────┬───────────────────────────────┘
+                       │
+                       │ MQTT subscribe
+                       ▼
+              ┌─────────────────┐
+              │ Aggregation     │
+              │ Server          │
+              │ (Your backend)  │
+              └─────────────────┘
+```
+
+Each ESP32 runs in its own Wokwi simulation but connects to real MQTT brokers, enabling actual inter-node communication.
+
+## Simulation Modes Summary
+
+| Board Type | Simulator | Networking | Peripherals |
+|------------|-----------|------------|-------------|
+| STM32/LM3S | QEMU | Semihosting only | Limited |
+| ESP32 | Wokwi | Real WiFi/MQTT | Full (sensors, LEDs, etc.) |
+| Arduino AVR | Not yet | N/A | N/A |
+
 ## Limitations
 
-1. **No real networking** - ESP32 WiFi not simulated, MQTT mocked
-2. **No inter-node communication** - Each node simulates in isolation
-3. **Limited peripherals** - Only semihosting output, no GPIO/ADC simulation
-4. **5-second timeout** - Long-running programs are terminated
+1. **Wokwi requires internet** - Simulations connect to Wokwi cloud
+2. **PlatformIO required for ESP32** - Compilation uses PIO toolchain
+3. **Sequential ESP32 sims** - Multi-node runs sequentially (parallel coming)
+4. **AVR not yet supported** - Use ESP32 or STM32 for now
 
 ## Future Enhancements
 
-- [ ] ESP32 simulation via Wokwi API
+- [x] ESP32 simulation via Wokwi API
+- [ ] Parallel multi-node Wokwi simulation
 - [ ] AVR simulation via simavr
-- [ ] Virtual CAN bus between nodes
-- [ ] GPIO/ADC peripheral mocking
+- [ ] Virtual CAN bus between STM32 nodes
 - [ ] Terraform integration for real cloud deployment
+- [ ] Real-time dashboard showing all node outputs

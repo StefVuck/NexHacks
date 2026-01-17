@@ -2,16 +2,42 @@
 
 ## Project Overview
 
-Natural language to distributed embedded systems with simulated verification and cloud aggregation.
+Natural language to distributed embedded systems with simulated verification, visualization, and real hardware deployment.
 
-**Core flow:**
+**Four-Stage Flow:**
 
-1. User describes multi-device IoT system in plain English
-2. LLM generates firmware for each node + server aggregation code
-3. Renode simulates the embedded swarm with inter-device communication
-4. Terraform provisions cloud VM running aggregation server
-5. Simulated nodes connect to real server for end-to-end validation
-6. Iterate until system behaviour matches spec
+```
+┌─────────┐    ┌─────────┐    ┌───────────┐    ┌─────────┐
+│ DESIGN  │ -> │  BUILD  │ -> │ VISUALIZE │ -> │ DEPLOY  │
+└─────────┘    └─────────┘    └───────────┘    └─────────┘
+```
+
+### Stage 1: Design
+- **Option A:** User describes system in plain English prompt
+- **Option B:** User places devices on interactive map/canvas
+- **Option C:** LLM suggests device placement based on prompt
+- Output: System spec with node positions, board types, and connections
+
+### Stage 2: Build (Iterative Loop)
+- Claude generates firmware for each node + server code
+- Compile firmware for target boards (ARM/ESP32)
+- Simulate in QEMU (STM32) or Wokwi (ESP32)
+- Run test assertions against output
+- If tests fail: feed errors back to Claude, regenerate (max 3 iterations)
+- Output: Working firmware binaries + server code
+
+### Stage 3: Visualize
+- Real-time simulation dashboard
+- Message flow between nodes (MQTT/HTTP traffic)
+- Node status indicators (running, error, idle)
+- Test assertion results
+- Server metrics and received data
+
+### Stage 4: Deploy
+- **Hardware:** Connect USB, detect boards, flash firmware (esptool/stm32flash)
+- **Cloud:** Terraform provisions aggregation server (AWS/GCP/Azure)
+- **Verify:** Real devices communicate with deployed server
+- Output: Production-ready distributed system
 
 ---
 
@@ -19,42 +45,64 @@ Natural language to distributed embedded systems with simulated verification and
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                           USER INPUT                                    │
-│  "5 temperature sensors reporting to central server every 10s,         │
-│   server calculates average and triggers alert if any > 40°C"          │
-└─────────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
+│                        STAGE 1: DESIGN                                  │
+│  ┌─────────────────────────────┐  ┌─────────────────────────────────┐  │
+│  │      TEXT PROMPT            │  │       VISUAL MAP EDITOR         │  │
+│  │  "5 temp sensors in         │  │    ┌───┐         ┌───┐         │  │
+│  │   warehouse corners..."     │  │    │ S1├────┐    │ S2│         │  │
+│  └──────────────┬──────────────┘  │    └───┘    │    └─┬─┘         │  │
+│                 │                 │         ┌───┴──┐   │           │  │
+│                 │                 │         │Server│◄──┘           │  │
+│                 └────────┬────────┘         └──────┘               │  │
+│                          │        └─────────────────────────────────┘  │
+│                          ▼                                             │
+│                 ┌─────────────────┐                                    │
+│                 │  LLM: Parse &   │                                    │
+│                 │  Suggest Layout │                                    │
+│                 └────────┬────────┘                                    │
+└──────────────────────────┼──────────────────────────────────────────────┘
+                           ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                         LLM AGENT                                       │
-│  Generates: node firmware, server code, Renode topology, Terraform     │
+│                        STAGE 2: BUILD LOOP                              │
+│                                                                         │
+│    ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐       │
+│    │ Generate │ -> │ Compile  │ -> │ Simulate │ -> │  Test    │       │
+│    │ Firmware │    │ (GCC)    │    │(QEMU/Wok)│    │ Assert   │       │
+│    └──────────┘    └──────────┘    └──────────┘    └────┬─────┘       │
+│         ▲                                               │              │
+│         │              ┌──────────┐                     │              │
+│         └──────────────│  Fail?   │◄────────────────────┘              │
+│           Feed errors  │ Retry≤3  │                                    │
+│                        └──────────┘                                    │
 └─────────────────────────────────────────────────────────────────────────┘
-                                    │
-                    ┌───────────────┼───────────────┐
-                    ▼               ▼               ▼
-             ┌──────────┐    ┌──────────┐    ┌──────────┐
-             │ Firmware │    │  Server  │    │  Infra   │
-             │ per node │    │   Code   │    │ Terraform│
-             └──────────┘    └──────────┘    └──────────┘
-                    │               │               │
-                    ▼               ▼               ▼
+                           │ Success
+                           ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                        SIMULATION LAYER                                 │
-│  ┌─────────────────────────────────┐    ┌─────────────────────────────┐│
-│  │         RENODE SWARM            │    │      CLOUD VM (Terraform)   ││
-│  │  ┌─────┐ ┌─────┐ ┌─────┐       │    │                             ││
-│  │  │Node1│ │Node2│ │Node3│ ...   │◄──►│   Aggregation Server        ││
-│  │  └─────┘ └─────┘ └─────┘       │    │   (MQTT/HTTP endpoint)      ││
-│  │       CAN/UART between nodes    │    │                             ││
-│  └─────────────────────────────────┘    └─────────────────────────────┘│
+│                      STAGE 3: VISUALIZE                                 │
+│  ┌─────────────────────────────────────────────────────────────────┐   │
+│  │                    SIMULATION DASHBOARD                          │   │
+│  │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐  │   │
+│  │  │  Topology View  │  │  Message Flow   │  │  Test Results   │  │   │
+│  │  │   [S1]──[Svr]   │  │  S1->Svr: temp  │  │  ✓ has_temp     │  │   │
+│  │  │   [S2]──┘       │  │  S2->Svr: temp  │  │  ✓ avg_calc     │  │   │
+│  │  └─────────────────┘  └─────────────────┘  └─────────────────┘  │   │
+│  └─────────────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
+                           │ User approves
+                           ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                         TEST HARNESS                                    │
-│  - Inject sensor values into Renode nodes                              │
-│  - Verify server receives expected aggregated data                     │
-│  - Assert alerting behaviour                                           │
+│                       STAGE 4: DEPLOY                                   │
+│                                                                         │
+│  ┌─────────────────────────────┐    ┌─────────────────────────────┐    │
+│  │     HARDWARE FLASH          │    │      CLOUD DEPLOY           │    │
+│  │  ┌─────┐  USB  ┌─────┐     │    │                             │    │
+│  │  │ PC  │◄─────►│Board│     │    │   terraform apply           │    │
+│  │  └─────┘       └─────┘     │    │   -> EC2/GCE instance       │    │
+│  │                            │    │   -> MQTT broker            │    │
+│  │  esptool.py / stm32flash   │    │   -> Aggregation server     │    │
+│  └─────────────────────────────┘    └─────────────────────────────┘    │
+│                                                                         │
+│                    Real devices ◄──── MQTT/HTTP ────► Cloud server     │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -76,23 +124,21 @@ swarm-architect/
 ├── CLAUDE.md
 ├── agent/                    # LLM orchestration (Backend)
 │   ├── __init__.py
-│   ├── system_parser.py      # NL → structured spec
-│   ├── firmware_gen.py       # Spec → C code per node
-│   ├── server_gen.py         # Spec → aggregation server code
-│   ├── protocol_gen.py       # Shared protocol definitions
+│   ├── orchestrator.py       # Main generation loop (STM32/ARM)
+│   ├── esp32_orchestrator.py # ESP32 generation loop (Wokwi)
+│   ├── boards.py             # Board configs with constraints
+│   ├── templates.py          # Code templates per board/feature
 │   └── prompts/              # System prompts for generation
-│       ├── system_decomposition.md
-│       ├── firmware_template.md
-│       └── server_template.md
-├── renode/                   # Simulation orchestration (Backend)
+├── simulator/                # Simulation backends (Backend)
 │   ├── __init__.py
-│   ├── orchestrator.py       # Dynamic .resc generation, lifecycle
-│   ├── network_bridge.py     # Connect simulated nodes to real network
-│   ├── templates/
-│   │   ├── stm32f4.repl
-│   │   └── base_setup.resc
-│   └── scripts/
-│       └── test_injection.py
+│   ├── orchestrator.py       # QEMU runner for ARM boards
+│   └── wokwi.py              # Wokwi API client for ESP32
+├── flasher/                  # Hardware flashing (Backend)
+│   ├── __init__.py
+│   ├── detector.py           # USB device detection
+│   ├── esp32.py              # esptool.py wrapper
+│   ├── stm32.py              # stm32flash wrapper
+│   └── arduino.py            # avrdude wrapper
 ├── infra/                    # Terraform configs (Backend)
 │   ├── main.tf
 │   ├── variables.tf
@@ -104,42 +150,45 @@ swarm-architect/
 ├── server/                   # Aggregation server template (Backend)
 │   ├── Dockerfile
 │   ├── requirements.txt
-│   ├── main.py               # FastAPI/Flask app template
+│   ├── main.py               # FastAPI app template
 │   ├── mqtt_handler.py       # MQTT ingestion
 │   └── alerting.py           # Threshold logic
-├── tests/                    # Test framework (Backend)
+├── api/                      # Backend API for frontend (Backend)
 │   ├── __init__.py
-│   ├── runner.py
-│   ├── assertions.py
-│   └── scenarios/
-│       └── example_scenario.yaml
-├── frontend/                 # Visualisation (Frontend)
+│   ├── main.py               # FastAPI app
+│   ├── routes/
+│   │   ├── design.py         # Stage 1: spec + layout
+│   │   ├── build.py          # Stage 2: generate + compile
+│   │   ├── simulate.py       # Stage 3: run + visualize
+│   │   └── deploy.py         # Stage 4: flash + terraform
+│   └── websocket.py          # Live updates for all stages
+├── frontend/                 # UI (Frontend)
 │   ├── package.json
 │   ├── src/
 │   │   ├── App.tsx
 │   │   ├── components/
-│   │   │   ├── TopologyGraph.tsx
-│   │   │   ├── MessageTimeline.tsx
-│   │   │   ├── NodeStatus.tsx
-│   │   │   ├── ServerMetrics.tsx
-│   │   │   └── SpecEditor.tsx
+│   │   │   ├── DeviceMap.tsx       # Drag-drop device placement
+│   │   │   ├── PromptInput.tsx     # NL description input
+│   │   │   ├── BuildProgress.tsx   # Iteration status
+│   │   │   ├── TopologyGraph.tsx   # Live simulation view
+│   │   │   ├── MessageTimeline.tsx # MQTT/HTTP traffic
+│   │   │   ├── TestResults.tsx     # Assertion pass/fail
+│   │   │   ├── FlashPanel.tsx      # USB detection + flash
+│   │   │   └── DeployPanel.tsx     # Terraform status
 │   │   ├── hooks/
-│   │   │   └── useSimulation.ts
+│   │   │   ├── useDesign.ts
+│   │   │   ├── useBuild.ts
+│   │   │   ├── useSimulation.ts
+│   │   │   └── useDeploy.ts
 │   │   └── api/
 │   │       └── client.ts
 │   └── public/
 ├── builds/                   # Generated artifacts (gitignored)
 │   ├── firmware/
-│   ├── server/
-│   └── renode/
-├── api/                      # Backend API for frontend (Backend)
-│   ├── __init__.py
-│   ├── main.py               # FastAPI app
-│   ├── routes/
-│   │   ├── generate.py
-│   │   ├── simulate.py
-│   │   └── deploy.py
-│   └── websocket.py          # Live simulation updates
+│   └── server/
+├── scripts/                  # Test scripts
+│   ├── test_loop.py          # QEMU integration test
+│   └── test_esp32.py         # Wokwi integration test
 └── docker-compose.yaml       # Local dev environment
 ```
 
@@ -152,8 +201,10 @@ swarm-architect/
 - **Language:** Python 3.11+
 - **API:** FastAPI with WebSocket support
 - **LLM:** Claude API (claude-sonnet-4-20250514)
-- **Simulation:** Renode 1.14+
-- **Infra:** Terraform 1.5+, targeting AWS/GCP/Azure (pick one, stick to it)
+- **Simulation:** QEMU (ARM/STM32), Wokwi (ESP32)
+- **Compilation:** arm-none-eabi-gcc (STM32), PlatformIO (ESP32)
+- **Flashing:** esptool.py (ESP32), stm32flash (STM32), avrdude (Arduino)
+- **Infra:** Terraform 1.5+, targeting AWS/GCP/Azure
 - **Server runtime:** Docker container on provisioned VM
 - **Protocol:** MQTT (Mosquitto) for IoT→Server, HTTP for control plane
 
@@ -161,6 +212,7 @@ swarm-architect/
 
 - **Framework:** Next.js 14+ with App Router
 - **Language:** TypeScript
+- **Map Editor:** React Flow (drag-drop device placement)
 - **Visualisation:** React Flow (topology), Recharts (metrics)
 - **State:** Zustand or React Query
 - **Styling:** Tailwind CSS
@@ -239,32 +291,44 @@ const NodeStatus = (props: any) => ...
 ### Frontend ↔ Backend API
 
 - REST for CRUD operations
-- WebSocket for live simulation updates
+- WebSocket for live updates across all stages
 
 ```
-WS /ws/simulation/{session_id}
+WS /ws/{session_id}
 
-Messages:
-→ {"type": "start", "spec": "..."}
-← {"type": "node_spawned", "node_id": "sensor_1", "status": "running"}
-← {"type": "message", "from": "sensor_1", "to": "server", "payload": {...}}
-← {"type": "test_result", "passed": true, "details": "..."}
-← {"type": "error", "message": "Compilation failed", "node_id": "sensor_2"}
+Stage 2: Build
+← {"stage": "build", "type": "iteration_start", "node_id": "sensor_1", "iteration": 1}
+← {"stage": "build", "type": "compile_result", "node_id": "sensor_1", "success": true}
+← {"stage": "build", "type": "compile_result", "node_id": "sensor_1", "success": false, "errors": "..."}
+← {"stage": "build", "type": "iteration_complete", "node_id": "sensor_1", "success": true}
+
+Stage 3: Simulate
+← {"stage": "simulate", "type": "node_started", "node_id": "sensor_1"}
+← {"stage": "simulate", "type": "output", "node_id": "sensor_1", "data": "temp=25"}
+← {"stage": "simulate", "type": "message", "from": "sensor_1", "to": "server", "payload": {...}}
+← {"stage": "simulate", "type": "test_result", "assertion": "has_temp", "passed": true}
+
+Stage 4: Deploy
+← {"stage": "deploy", "type": "device_detected", "port": "/dev/ttyUSB0", "board": "esp32"}
+← {"stage": "deploy", "type": "flash_progress", "node_id": "sensor_1", "percent": 45}
+← {"stage": "deploy", "type": "flash_complete", "node_id": "sensor_1", "success": true}
+← {"stage": "deploy", "type": "terraform_status", "state": "applying", "resource": "aws_instance.server"}
+← {"stage": "deploy", "type": "server_ready", "endpoint": "http://1.2.3.4:8080"}
 ```
 
 ---
 
 ## Key Technical Decisions
 
-### Renode Network Bridge
+### Simulation Strategy
 
-Simulated nodes need to reach the real aggregation server. Options:
+| Board Type | Simulator | Networking |
+|------------|-----------|------------|
+| STM32/ARM  | QEMU      | Semihosting output only |
+| ESP32      | Wokwi     | Real WiFi/MQTT to internet |
+| Arduino    | Future    | - |
 
-1. **TAP interface** - Renode supports this, bridges to host network
-2. **Port forwarding** - Renode exposes simulated UART/ETH to host port
-3. **Mock at boundary** - Don't actually connect; mock server responses in Renode
-
-**Decision:** Start with option 3 for hackathon (least complexity), stretch to option 1 if time.
+**ESP32 advantage:** Wokwi simulates real WiFi, so nodes can connect to actual MQTT brokers during simulation.
 
 ### LLM Iteration Strategy
 
@@ -275,11 +339,21 @@ When tests fail:
 3. Regenerate only affected node(s), not entire system
 4. Max 3 iterations before surfacing to user
 
+### Hardware Flashing
+
+| Board | Tool | Connection |
+|-------|------|------------|
+| ESP32 | esptool.py | USB (auto-detect /dev/ttyUSB*) |
+| STM32 | stm32flash | UART bootloader |
+| Arduino | avrdude | USB |
+
+USB detection via pyserial to list available ports, match against known VID/PID for boards.
+
 ### Terraform Lifecycle
 
 - `terraform apply` on "deploy" action from frontend
 - `terraform destroy` on session end or timeout (30 min default)
-- Output server IP/endpoint fed back to Renode bridge config
+- Output server IP/endpoint shown in deploy panel
 
 ---
 
@@ -288,7 +362,7 @@ When tests fail:
 ```bash
 # Backend
 ANTHROPIC_API_KEY=sk-ant-...
-RENODE_PATH=/opt/renode/renode
+WOKWI_CLI_TOKEN=...              # From wokwi.com/dashboard/ci (ESP32 simulation)
 
 # Terraform (pick your cloud)
 AWS_ACCESS_KEY_ID=...
@@ -316,8 +390,15 @@ python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 
-# Verify Renode
-renode --version
+# Install simulation/flash tools
+brew install qemu arm-none-eabi-gcc  # macOS
+pip install platformio esptool       # ESP32
+
+# Set API key
+echo "ANTHROPIC_API_KEY=sk-ant-..." > .env
+
+# Test simulation loop
+python scripts/test_loop.py
 
 # Run API
 uvicorn api.main:app --reload --port 8000
@@ -347,10 +428,14 @@ terraform plan  # Verify config
 ### Backend
 
 ```bash
-pytest tests/ -v
+# QEMU simulation test (STM32)
+python scripts/test_loop.py
 
-# Single scenario
-pytest tests/test_scenarios.py::test_temperature_swarm -v
+# ESP32 code generation test
+python scripts/test_esp32.py
+
+# Full pytest suite
+pytest tests/ -v
 ```
 
 ### Frontend
@@ -361,88 +446,120 @@ npm run test
 npm run e2e  # If Playwright configured
 ```
 
-### Manual Renode Verification
+### Manual QEMU Verification
 
 ```bash
-renode --console
-(monitor) include @renode/templates/base_setup.resc
-(monitor) start
-(monitor) sysbus.uart0 CreateFileBackend @/tmp/uart.log
+# Compile bare-metal ARM
+arm-none-eabi-gcc -mcpu=cortex-m3 -mthumb -nostdlib -T linker.ld -o test.elf test.c
+
+# Run in QEMU with semihosting
+qemu-system-arm -M lm3s6965evb -nographic -semihosting -kernel test.elf
 ```
 
 ---
 
 ## API Endpoints (Backend Team)
 
-| Method | Path                   | Description                |
-| ------ | ---------------------- | -------------------------- |
-| POST   | `/api/generate`        | NL spec → generated system |
-| POST   | `/api/simulate/start`  | Start Renode simulation    |
-| POST   | `/api/simulate/stop`   | Stop simulation            |
-| GET    | `/api/simulate/status` | Current simulation state   |
-| POST   | `/api/deploy`          | Terraform apply for server |
-| DELETE | `/api/deploy`          | Terraform destroy          |
-| POST   | `/api/test/run`        | Execute test scenario      |
-| WS     | `/ws/simulation/{id}`  | Live updates               |
+### Stage 1: Design
+| Method | Path                      | Description                          |
+| ------ | ------------------------- | ------------------------------------ |
+| POST   | `/api/design/parse`       | NL prompt → structured spec          |
+| POST   | `/api/design/suggest`     | LLM suggests device layout           |
+| POST   | `/api/design/save`        | Save spec + layout                   |
+| GET    | `/api/design/{id}`        | Get saved design                     |
+
+### Stage 2: Build
+| Method | Path                      | Description                          |
+| ------ | ------------------------- | ------------------------------------ |
+| POST   | `/api/build/start`        | Start generation loop                |
+| GET    | `/api/build/{id}/status`  | Current iteration status             |
+| POST   | `/api/build/{id}/stop`    | Cancel build                         |
+
+### Stage 3: Simulate
+| Method | Path                      | Description                          |
+| ------ | ------------------------- | ------------------------------------ |
+| POST   | `/api/simulate/start`     | Start QEMU/Wokwi simulation          |
+| POST   | `/api/simulate/stop`      | Stop simulation                      |
+| GET    | `/api/simulate/status`    | Simulation state + output            |
+
+### Stage 4: Deploy
+| Method | Path                      | Description                          |
+| ------ | ------------------------- | ------------------------------------ |
+| GET    | `/api/deploy/devices`     | List connected USB devices           |
+| POST   | `/api/deploy/flash`       | Flash firmware to device             |
+| POST   | `/api/deploy/cloud`       | Terraform apply                      |
+| DELETE | `/api/deploy/cloud`       | Terraform destroy                    |
+| GET    | `/api/deploy/status`      | Flash progress + cloud status        |
+
+### WebSocket
+| Path                       | Description                          |
+| -------------------------- | ------------------------------------ |
+| WS `/ws/{session_id}`      | Live updates for all stages          |
 
 ---
 
 ## Frontend Pages (Frontend Team)
 
-| Route            | Purpose                            |
-| ---------------- | ---------------------------------- |
-| `/`              | Landing, spec input                |
-| `/design/{id}`   | Topology editor, generation status |
-| `/simulate/{id}` | Live simulation view, message flow |
-| `/results/{id}`  | Test results, logs, export         |
+| Route              | Stage     | Purpose                              |
+| ------------------ | --------- | ------------------------------------ |
+| `/`                | -         | Landing, quick start                 |
+| `/design/{id}`     | 1: Design | Prompt input OR device map editor    |
+| `/build/{id}`      | 2: Build  | Generation progress, iteration view  |
+| `/simulate/{id}`   | 3: Viz    | Live topology, message flow, tests   |
+| `/deploy/{id}`     | 4: Deploy | USB detection, flash, terraform      |
 
 ---
 
 ## Definition of Done (Hackathon)
 
-### Minimum Viable Demo
+### MVP: Stages 1-3 (Design → Build → Visualize)
 
-- [ ] User enters NL description
-- [ ] System generates firmware for 3+ nodes
-- [ ] Renode simulation runs with visible message passing
-- [ ] Basic test assertions pass/fail displayed
-- [ ] Server receives data (even if mocked)
+- [ ] User can enter NL prompt OR place devices on map
+- [ ] LLM generates firmware for 3+ nodes
+- [ ] Build loop compiles and simulates (QEMU or Wokwi)
+- [ ] Iteration retries on failure (up to 3x)
+- [ ] Live visualization shows nodes and message flow
+- [ ] Test assertions pass/fail displayed
 
-### Stretch
+### Stretch: Stage 4 (Deploy)
 
-- [ ] Real Terraform-deployed server receiving data
-- [ ] Iteration loop fixes failing tests
-- [ ] Message timeline visualisation
-- [ ] Hardware deployment path documented
+- [ ] USB device detection shows connected boards
+- [ ] Flash firmware to real ESP32/STM32
+- [ ] Terraform deploys aggregation server to cloud
+- [ ] Real devices communicate with deployed server
+- [ ] End-to-end demo: prompt → working hardware
 
 ---
 
 ## Known Gotchas
 
-1. **Renode CAN simulation** requires specific platform files; STM32F4 Discovery is well-supported
-2. **Renode startup is slow** (~5s); don't restart for each test, reset state instead
-3. **Claude may generate non-compiling code**; always compile before simulate, feed errors back
+1. **Claude may generate non-compiling code**; always compile before simulate, feed errors back
+2. **QEMU semihosting** writes to stderr, not stdout; capture both
+3. **Wokwi requires internet** and API token from wokwi.com/dashboard/ci
 4. **Terraform state** can get corrupted if interrupted; use `-lock=false` for hackathon speed
-5. **MQTT in Renode** isn't native; simulated nodes likely use UART→bridge→MQTT pattern
+5. **USB detection** requires appropriate permissions (udev rules on Linux)
+6. **ESP32 flashing** needs esptool.py and board in bootloader mode (hold BOOT, press RESET)
+7. **STM32 flashing** via stm32flash requires UART bootloader (BOOT0 pin high)
 
 ---
 
 ## Quick Commands
 
 ```bash
-# Generate firmware for a spec
-curl -X POST http://localhost:8000/api/generate \
-  -H "Content-Type: application/json" \
-  -d '{"spec": "3 temperature sensors, 1 controller, CAN bus"}'
+# Test QEMU simulation loop
+python scripts/test_loop.py
 
-# Start simulation
-curl -X POST http://localhost:8000/api/simulate/start \
-  -H "Content-Type: application/json" \
-  -d '{"session_id": "abc123"}'
+# Test ESP32 code generation
+python scripts/test_esp32.py
 
-# Deploy infrastructure
-curl -X POST http://localhost:8000/api/deploy \
-  -d '{"session_id": "abc123"}'
+# Flash ESP32 manually
+esptool.py --port /dev/ttyUSB0 write_flash 0x0 firmware.bin
+
+# Flash STM32 manually
+stm32flash -w firmware.bin /dev/ttyUSB0
+
+# Terraform deploy
+cd infra && terraform apply -auto-approve
 ```
 
 ---
