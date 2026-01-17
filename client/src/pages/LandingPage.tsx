@@ -1,14 +1,13 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { motion } from 'framer-motion';
-import { Terminal, Shield, Cpu, Zap, ChevronRight, Activity, Globe as GlobeIcon } from 'lucide-react';
+import { Cpu, Zap, ChevronRight, Globe as GlobeIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import heliosLogo from '../assets/helios.png';
 
 const GlobeViz = React.lazy(() => import('../components/GlobeViz'));
 
 const LandingPage = () => {
     const navigate = useNavigate();
-    const [typedText, setTypedText] = useState('');
-    const fullText = "Create a swarm of 5 drones to monitor the perimeter...";
     const [dimensions, setDimensions] = useState({ width: window.innerWidth, height: window.innerHeight });
 
     useEffect(() => {
@@ -17,21 +16,11 @@ const LandingPage = () => {
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
-    useEffect(() => {
-        let index = 0;
-        const interval = setInterval(() => {
-            setTypedText(fullText.slice(0, index));
-            index++;
-            if (index > fullText.length) clearInterval(interval);
-        }, 50);
-        return () => clearInterval(interval);
-    }, []);
-
     return (
-        <div className="min-h-screen bg-[#050505] text-white font-sans selection:bg-blue-500/30 overflow-hidden relative">
+        <div className="min-h-screen bg-[#121212] text-white font-sans selection:bg-blue-500/30 overflow-hidden relative">
             {/* Globe Background */}
             <div className="absolute inset-0 z-0 opacity-60">
-                <Suspense fallback={<div className="w-full h-full bg-[#050505]" />}>
+                <Suspense fallback={<div className="w-full h-full bg-[#121212]" />}>
                     <GlobeViz width={dimensions.width} height={dimensions.height} />
                 </Suspense>
             </div>
@@ -45,12 +34,12 @@ const LandingPage = () => {
             />
 
             {/* Vignette - allowing clicks through */}
-            <div className="absolute inset-0 z-0 pointer-events-none bg-[radial-gradient(circle_at_center,transparent_0%,#050505_90%)]" />
+            <div className="absolute inset-0 z-0 pointer-events-none bg-[radial-gradient(circle_at_center,transparent_0%,#121212_90%)]" />
 
             {/* Navigation */}
             <nav className="relative z-10 flex items-center justify-between px-8 py-6 border-b border-white/5 bg-black/20 backdrop-blur-sm pointer-events-auto">
                 <div className="flex items-center gap-2">
-                    <Shield className="w-6 h-6 text-blue-500" />
+                    <img src={heliosLogo} alt="Helios Logo" className="w-8 h-8 object-contain" />
                     <span className="text-xl font-bold tracking-tight">HELIOS</span>
                 </div>
                 <div className="flex items-center gap-6 text-sm font-medium text-gray-400">
@@ -107,7 +96,7 @@ const LandingPage = () => {
                     />
                 </div>
             </section>
-        </div>
+        </div >
     );
 };
 
