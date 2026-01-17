@@ -30,3 +30,13 @@ Thumbs.db
 *.elf
 *.o
 *.ld
+
+# Terraform
+*.tfstate
+*.tfstate.backup
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+terraform.tfvars
+*.auto.tfvars
+crash.log

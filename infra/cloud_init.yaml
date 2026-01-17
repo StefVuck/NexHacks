@@ -1,0 +1,349 @@
+#cloud-config
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - docker.io
+  - docker-compose
+  - mosquitto
+  - mosquitto-clients
+  - python3-pip
+  - python3-venv
+  - jq
+  - htop
+
+write_files:
+  # Mosquitto configuration
+  - path: /etc/mosquitto/conf.d/swarm.conf
+    content: |
+      listener ${mqtt_port}
+      allow_anonymous true
+
+      # WebSocket listener for browser clients
+      listener 9001
+      protocol websockets
+      allow_anonymous true
+
+      # Logging
+      log_dest file /var/log/mosquitto/mosquitto.log
+      log_type all
+
+  # Swarm server environment
+  - path: /opt/swarm/env
+    content: |
+      SWARM_ID=${swarm_id}
+      MQTT_BROKER=localhost
+      MQTT_PORT=${mqtt_port}
+      HTTP_PORT=${http_port}
+
+  # Base aggregation server (LLM will extend this)
+  - path: /opt/swarm/server/main.py
+    content: |
+      """Swarm Aggregation Server - Base Template.
+
+      LLM-generated handlers go in /opt/swarm/scripts/
+      They are auto-imported and registered.
+      """
+      import json
+      import os
+      import sys
+      import importlib.util
+      from pathlib import Path
+      from datetime import datetime
+      from threading import Thread
+
+      from fastapi import FastAPI, HTTPException
+      from fastapi.middleware.cors import CORSMiddleware
+      from pydantic import BaseModel
+      import paho.mqtt.client as mqtt
+      import uvicorn
+
+      SWARM_ID = os.getenv("SWARM_ID", "default")
+      MQTT_BROKER = os.getenv("MQTT_BROKER", "localhost")
+      MQTT_PORT = int(os.getenv("MQTT_PORT", "1883"))
+      HTTP_PORT = int(os.getenv("HTTP_PORT", "8080"))
+      SCRIPTS_DIR = Path("/opt/swarm/scripts")
+
+      app = FastAPI(title=f"Swarm Aggregation Server - {SWARM_ID}")
+      app.add_middleware(
+          CORSMiddleware,
+          allow_origins=["*"],
+          allow_methods=["*"],
+          allow_headers=["*"],
+      )
+
+      # In-memory storage (LLM scripts can use this)
+      telemetry_store: dict[str, list[dict]] = {}
+      node_status: dict[str, dict] = {}
+      alerts: list[dict] = []
+
+      # Custom handlers loaded from scripts
+      custom_handlers: dict[str, callable] = {}
+
+
+      class TelemetryPayload(BaseModel):
+          timestamp: int | None = None
+          readings: dict
+
+
+      def load_custom_scripts():
+          """Load LLM-generated scripts from /opt/swarm/scripts/"""
+          if not SCRIPTS_DIR.exists():
+              SCRIPTS_DIR.mkdir(parents=True, exist_ok=True)
+              return
+
+          for script_path in SCRIPTS_DIR.glob("*.py"):
+              try:
+                  spec = importlib.util.spec_from_file_location(
+                      script_path.stem, script_path
+                  )
+                  module = importlib.util.module_from_spec(spec)
+                  # Inject globals for scripts to use
+                  module.telemetry_store = telemetry_store
+                  module.node_status = node_status
+                  module.alerts = alerts
+                  module.mqtt_client = mqtt_client
+                  module.SWARM_ID = SWARM_ID
+                  spec.loader.exec_module(module)
+
+                  # Register handlers
+                  if hasattr(module, "on_telemetry"):
+                      custom_handlers["on_telemetry"] = module.on_telemetry
+                  if hasattr(module, "on_mqtt_message"):
+                      custom_handlers["on_mqtt_message"] = module.on_mqtt_message
+
+                  print(f"Loaded script: {script_path.name}")
+              except Exception as e:
+                  print(f"Error loading {script_path}: {e}")
+
+
+      # MQTT callbacks
+      def on_mqtt_connect(client, userdata, flags, rc):
+          print(f"Connected to MQTT broker (rc={rc})")
+          client.subscribe(f"swarm/{SWARM_ID}/#")
+          print(f"Subscribed to swarm/{SWARM_ID}/#")
+
+
+      def on_mqtt_message(client, userdata, msg):
+          try:
+              payload = json.loads(msg.payload.decode())
+              topic_parts = msg.topic.split("/")
+
+              # swarm/{swarm_id}/nodes/{node_id}/telemetry
+              if len(topic_parts) >= 4 and topic_parts[3] == "telemetry":
+                  node_id = topic_parts[2] if len(topic_parts) > 2 else "unknown"
+                  handle_telemetry(node_id, payload)
+
+              # Custom handler
+              if "on_mqtt_message" in custom_handlers:
+                  custom_handlers["on_mqtt_message"](msg.topic, payload)
+
+          except Exception as e:
+              print(f"MQTT message error: {e}")
+
+
+      def handle_telemetry(node_id: str, data: dict):
+          """Process incoming telemetry."""
+          timestamp = data.get("timestamp", int(datetime.now().timestamp() * 1000))
+          readings = data.get("readings", data)
+
+          entry = {
+              "timestamp": timestamp,
+              "readings": readings,
+              "received_at": datetime.now().isoformat(),
+          }
+
+          if node_id not in telemetry_store:
+              telemetry_store[node_id] = []
+          telemetry_store[node_id].append(entry)
+
+          # Keep last 1000 entries per node
+          if len(telemetry_store[node_id]) > 1000:
+              telemetry_store[node_id] = telemetry_store[node_id][-1000:]
+
+          # Update node status
+          node_status[node_id] = {
+              "last_seen": datetime.now().isoformat(),
+              "latest_readings": readings,
+          }
+
+          # Custom handler
+          if "on_telemetry" in custom_handlers:
+              custom_handlers["on_telemetry"](node_id, readings, timestamp)
+
+          print(f"[{node_id}] {readings}")
+
+
+      # HTTP endpoints
+      @app.get("/")
+      def root():
+          return {
+              "swarm_id": SWARM_ID,
+              "nodes": list(node_status.keys()),
+              "total_telemetry": sum(len(v) for v in telemetry_store.values()),
+          }
+
+
+      @app.post("/api/telemetry/{node_id}")
+      def post_telemetry(node_id: str, payload: TelemetryPayload):
+          handle_telemetry(node_id, payload.model_dump())
+          return {"status": "ok"}
+
+
+      @app.get("/api/nodes")
+      def get_nodes():
+          return node_status
+
+
+      @app.get("/api/nodes/{node_id}")
+      def get_node(node_id: str):
+          if node_id not in node_status:
+              raise HTTPException(404, "Node not found")
+          return {
+              "status": node_status[node_id],
+              "telemetry": telemetry_store.get(node_id, [])[-100:],
+          }
+
+
+      @app.get("/api/telemetry")
+      def get_all_telemetry(limit: int = 100):
+          result = {}
+          for node_id, entries in telemetry_store.items():
+              result[node_id] = entries[-limit:]
+          return result
+
+
+      @app.get("/api/alerts")
+      def get_alerts():
+          return alerts[-100:]
+
+
+      @app.post("/api/command/{node_id}")
+      def send_command(node_id: str, command: dict):
+          topic = f"swarm/{SWARM_ID}/nodes/{node_id}/command"
+          mqtt_client.publish(topic, json.dumps(command))
+          return {"status": "sent", "topic": topic}
+
+
+      @app.post("/api/reload-scripts")
+      def reload_scripts():
+          load_custom_scripts()
+          return {"status": "ok", "handlers": list(custom_handlers.keys())}
+
+
+      # Initialize MQTT client
+      mqtt_client = mqtt.Client()
+      mqtt_client.on_connect = on_mqtt_connect
+      mqtt_client.on_message = on_mqtt_message
+
+
+      def start_mqtt():
+          mqtt_client.connect(MQTT_BROKER, MQTT_PORT)
+          mqtt_client.loop_forever()
+
+
+      if __name__ == "__main__":
+          load_custom_scripts()
+
+          # Start MQTT in background thread
+          mqtt_thread = Thread(target=start_mqtt, daemon=True)
+          mqtt_thread.start()
+
+          # Start HTTP server
+          uvicorn.run(app, host="0.0.0.0", port=HTTP_PORT)
+
+  # Requirements for server
+  - path: /opt/swarm/server/requirements.txt
+    content: |
+      fastapi>=0.115.0
+      uvicorn>=0.32.0
+      paho-mqtt>=2.0.0
+      pydantic>=2.0.0
+
+  # Systemd service for the aggregation server
+  - path: /etc/systemd/system/swarm-server.service
+    content: |
+      [Unit]
+      Description=Swarm Aggregation Server
+      After=network.target mosquitto.service
+      Wants=mosquitto.service
+
+      [Service]
+      Type=simple
+      User=ubuntu
+      WorkingDirectory=/opt/swarm/server
+      EnvironmentFile=/opt/swarm/env
+      ExecStart=/opt/swarm/venv/bin/python main.py
+      Restart=always
+      RestartSec=5
+
+      [Install]
+      WantedBy=multi-user.target
+
+  # Example LLM-generated script (placeholder)
+  - path: /opt/swarm/scripts/example_handler.py
+    content: |
+      """Example custom handler - LLM will replace this.
+
+      Available globals (injected by main server):
+        - telemetry_store: dict[node_id, list[entries]]
+        - node_status: dict[node_id, status]
+        - alerts: list[alert_dicts]
+        - mqtt_client: paho MQTT client
+        - SWARM_ID: str
+      """
+
+      def on_telemetry(node_id: str, readings: dict, timestamp: int):
+          """Called for each telemetry message."""
+          # Example: Alert if temperature > 40
+          if "temp" in readings and readings["temp"] > 40:
+              alerts.append({
+                  "type": "high_temp",
+                  "node_id": node_id,
+                  "value": readings["temp"],
+                  "timestamp": timestamp,
+              })
+              print(f"ALERT: High temperature on {node_id}: {readings['temp']}C")
+
+  # Auto-shutdown script (if enabled)
+  - path: /opt/swarm/auto_shutdown.sh
+    permissions: '0755'
+    content: |
+      #!/bin/bash
+      HOURS=${auto_destroy_hours}
+      if [ "$HOURS" -gt 0 ]; then
+        echo "Server will auto-terminate in $HOURS hours"
+        sleep $((HOURS * 3600))
+        echo "Auto-terminating instance..."
+        sudo shutdown -h now
+      fi
+
+runcmd:
+  # Setup Docker
+  - systemctl enable docker
+  - systemctl start docker
+  - usermod -aG docker ubuntu
+
+  # Setup Mosquitto
+  - systemctl enable mosquitto
+  - systemctl restart mosquitto
+
+  # Setup Python environment
+  - python3 -m venv /opt/swarm/venv
+  - /opt/swarm/venv/bin/pip install -r /opt/swarm/server/requirements.txt
+
+  # Create scripts directory
+  - mkdir -p /opt/swarm/scripts
+  - chown -R ubuntu:ubuntu /opt/swarm
+
+  # Start aggregation server
+  - systemctl daemon-reload
+  - systemctl enable swarm-server
+  - systemctl start swarm-server
+
+  # Start auto-shutdown timer (background)
+  - nohup /opt/swarm/auto_shutdown.sh &>/var/log/auto_shutdown.log &
+
+  # Log completion
+  - echo "Swarm aggregation server ready!" > /opt/swarm/ready
