@@ -1,0 +1,35 @@
+// STM32F4 Discovery platform for Swarm Architect
+// Minimal config: CPU, memory, USART2 for telemetry
+
+cpu: CPU.CortexM @ sysbus
+    cpuType: "cortex-m4f"
+    nvic: nvic
+
+nvic: IRQControllers.NVIC @ sysbus 0xE000E000
+    priorityMask: 0xF0
+    systickFrequency: 168000000
+    -> cpu@0
+
+flash: Memory.MappedMemory @ sysbus 0x08000000
+    size: 0x100000
+
+sram: Memory.MappedMemory @ sysbus 0x20000000
+    size: 0x20000
+
+usart2: UART.STM32_UART @ sysbus 0x40004400
+    -> nvic@38
+
+rcc: Miscellaneous.STM32F4_RCC @ sysbus 0x40023800
+    rtcPeripheral: rtc
+
+rtc: Timers.STM32F4_RTC @ sysbus 0x40002800
+
+gpioA: GPIOPort.STM32_GPIOPort @ sysbus <0x40020000, +0x400>
+    modeResetValue: 0xA8000000
+    [2-3] -> usart2@[0-1]
+
+gpioB: GPIOPort.STM32_GPIOPort @ sysbus <0x40020400, +0x400>
+
+gpioC: GPIOPort.STM32_GPIOPort @ sysbus <0x40020800, +0x400>
+
+gpioD: GPIOPort.STM32_GPIOPort @ sysbus <0x40020C00, +0x400>

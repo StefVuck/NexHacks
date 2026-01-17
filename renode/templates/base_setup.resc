@@ -1,0 +1,17 @@
+# Base Renode setup script for Swarm Architect
+# This is a template - actual simulations use dynamically generated .resc files
+
+using sysbus
+
+# Create a single machine for testing
+mach create "test_node"
+machine LoadPlatformDescription @renode/templates/stm32f4.repl
+
+# Enable UART analyzer for debugging
+showAnalyzer sysbus.usart2
+
+# Uncomment to load firmware:
+# sysbus LoadELF @builds/firmware/node.elf
+
+# Uncomment to start simulation:
+# start
