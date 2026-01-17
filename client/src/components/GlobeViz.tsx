@@ -41,10 +41,14 @@ const GlobeViz: React.FC<GlobeProps> = ({ width, height }) => {
     }, []);
 
     useEffect(() => {
-        // Auto-rotate
+        // Auto-rotate and disable interactions
         if (globeEl.current) {
-            globeEl.current.controls().autoRotate = true;
-            globeEl.current.controls().autoRotateSpeed = 0.5;
+            const controls = globeEl.current.controls();
+            controls.autoRotate = true;
+            controls.autoRotateSpeed = 0.5;
+            controls.enableZoom = false;
+            controls.enablePan = false;
+            controls.enableRotate = false;
             globeEl.current.pointOfView({ altitude: 2.5 });
         }
     }, [width]); // Re-apply when width changes/re-renders
