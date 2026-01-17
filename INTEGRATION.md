@@ -309,11 +309,279 @@ Each ESP32 runs in its own Wokwi simulation but connects to real MQTT brokers, e
 3. **Sequential ESP32 sims** - Multi-node runs sequentially (parallel coming)
 4. **AVR not yet supported** - Use ESP32 or STM32 for now
 
+## Stage 4: Deployment
+
+After simulation passes, deploy to real hardware and cloud infrastructure.
+
+### Deployment Flow
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                         DEPLOYMENT                                   │
+│                                                                      │
+│  1. Provision Cloud          2. Inject Config        3. Flash       │
+│  ┌─────────────────┐        ┌─────────────────┐    ┌─────────────┐ │
+│  │ terraform apply │   ->   │ Get server IP   │ -> │ esptool.py  │ │
+│  │ - EC2 instance  │        │ Inject into     │    │ stm32flash  │ │
+│  │ - MQTT broker   │        │ firmware        │    │             │ │
+│  │ - Security group│        │                 │    │             │ │
+│  └─────────────────┘        └─────────────────┘    └─────────────┘ │
+│           │                                               │         │
+│           ▼                                               ▼         │
+│  ┌─────────────────────────────────────────────────────────────┐   │
+│  │                    LIVE SYSTEM                               │   │
+│  │   Real ESP32s  ◄──── MQTT ────►  Cloud Server               │   │
+│  └─────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Terraform Configuration
+
+Frontend needs to collect these variables:
+
+```typescript
+interface TerraformConfig {
+  swarm_id: string;           // Unique identifier, e.g., "warehouse-demo"
+  aws_region?: string;        // Default: "us-east-1"
+  instance_type?: string;     // Default: "t3.micro"
+  auto_destroy_hours?: number; // Auto-terminate, default: 2 (0 to disable)
+}
+```
+
+### WiFi Configuration
+
+For firmware to connect to the cloud server:
+
+```typescript
+interface WifiConfig {
+  ssid: string;               // WiFi network name
+  password: string;           // WiFi password
+}
+```
+
+### Deploy Config (Injected into Firmware)
+
+```typescript
+interface DeployConfig {
+  wifi_ssid: string;
+  wifi_password: string;
+  server_url: string;         // From Terraform output
+  mqtt_broker: string;        // From Terraform output
+  mqtt_port: number;          // Default: 1883
+  node_id: string;            // Unique per device
+  swarm_id: string;
+}
+```
+
+### Terraform Outputs
+
+After `terraform apply`, these values are returned:
+
+```typescript
+interface TerraformOutputs {
+  server_ip: string;          // "52.1.2.3"
+  server_url: string;         // "http://52.1.2.3:8080"
+  mqtt_broker: string;        // "52.1.2.3"
+  mqtt_port: number;          // 1883
+  mqtt_ws_url: string;        // "ws://52.1.2.3:9001" (for browser)
+  ssh_command: string;        // "ssh ubuntu@52.1.2.3"
+  instance_id: string;        // For manual termination
+}
+```
+
+### USB Device Detection
+
+```typescript
+interface DetectedDevice {
+  port: string;               // "/dev/ttyUSB0" or "COM3"
+  board_type: string;         // "esp32" | "stm32" | "arduino_uno" | "unknown"
+  chip_name: string;          // "Silicon Labs CP210x"
+  vid: string;                // USB Vendor ID
+  pid: string;                // USB Product ID
+}
+```
+
+### Flash Progress
+
+```typescript
+interface FlashProgress {
+  node_id: string;
+  port: string;
+  stage: "erasing" | "writing" | "verifying" | "complete" | "error";
+  percent: number;            // 0-100
+  error?: string;
+}
+```
+
+### Deployment API Endpoints
+
+```typescript
+// Cloud Infrastructure
+POST /api/deploy/cloud
+  Body: TerraformConfig
+  Response: { status: "provisioning", estimated_time: 120 }
+
+GET /api/deploy/cloud/status
+  Response: TerraformOutputs | { status: "provisioning" | "failed", error?: string }
+
+DELETE /api/deploy/cloud
+  Response: { status: "destroying" }
+
+// Hardware Flashing
+GET /api/deploy/devices
+  Response: DetectedDevice[]
+
+POST /api/deploy/flash
+  Body: {
+    node_id: string;
+    port: string;
+    firmware_path?: string;   // If pre-compiled, otherwise uses session build
+    wifi_config: WifiConfig;
+  }
+  Response: { status: "flashing" }
+
+GET /api/deploy/flash/status
+  Response: { [node_id]: FlashProgress }
+```
+
+### WebSocket Events (Stage 4)
+
+```typescript
+// Cloud provisioning
+← { stage: "deploy", type: "terraform_start" }
+← { stage: "deploy", type: "terraform_progress", resource: "aws_instance.server", status: "creating" }
+← { stage: "deploy", type: "terraform_complete", outputs: TerraformOutputs }
+← { stage: "deploy", type: "terraform_error", error: string }
+
+// Hardware flashing
+← { stage: "deploy", type: "device_detected", device: DetectedDevice }
+← { stage: "deploy", type: "device_disconnected", port: string }
+← { stage: "deploy", type: "flash_start", node_id: string, port: string }
+← { stage: "deploy", type: "flash_progress", node_id: string, percent: number }
+← { stage: "deploy", type: "flash_complete", node_id: string }
+← { stage: "deploy", type: "flash_error", node_id: string, error: string }
+
+// Live system
+← { stage: "deploy", type: "node_online", node_id: string, ip: string }
+← { stage: "deploy", type: "server_received", node_id: string, data: object }
+```
+
+### Server API (Aggregation Server)
+
+Once deployed, the cloud server exposes:
+
+```typescript
+// Base URL: http://{server_ip}:8080
+
+GET /
+  Response: { swarm_id, nodes: string[], total_telemetry: number, alerts: number }
+
+GET /api/nodes
+  Response: { [node_id]: { last_seen: string, latest_readings: object } }
+
+GET /api/nodes/{node_id}
+  Response: { status: object, telemetry: object[] }
+
+GET /api/telemetry?limit=100
+  Response: { [node_id]: object[] }
+
+GET /api/alerts
+  Response: object[]
+
+POST /api/command/{node_id}
+  Body: { action: string, ... }
+  Response: { status: "sent", topic: string }
+
+// For LLM-generated scripts
+POST /api/reload-scripts
+  Response: { status: "ok", handlers: string[] }
+```
+
+### MQTT Topics
+
+Devices publish/subscribe to these topics:
+
+```
+swarm/{swarm_id}/nodes/{node_id}/telemetry   <- Device publishes readings
+swarm/{swarm_id}/nodes/{node_id}/command     -> Device receives commands
+```
+
+Payload format:
+```json
+{
+  "timestamp": 1705500000000,
+  "readings": {
+    "temp": 25.5,
+    "humidity": 60
+  }
+}
+```
+
+### Environment Variables (Backend)
+
+```bash
+# Required
+ANTHROPIC_API_KEY=sk-ant-...
+
+# Optional - Terraform
+AWS_ACCESS_KEY_ID=...
+AWS_SECRET_ACCESS_KEY=...
+AWS_REGION=us-east-1
+
+# Optional - Wokwi (for ESP32 simulation)
+WOKWI_CLI_TOKEN=...
+```
+
+### Complete Frontend Flow
+
+```typescript
+// 1. Design
+const spec = await api.post('/api/design/parse', { prompt: userInput });
+// or manual device placement
+
+// 2. Build
+const ws = new WebSocket(`/ws/${sessionId}`);
+await api.post('/api/build/start', { spec });
+// Listen for build progress via WebSocket
+
+// 3. Simulate
+await api.post('/api/simulate/start', { session_id: sessionId });
+// Watch simulation output via WebSocket
+
+// 4. Deploy
+// 4a. Provision cloud
+await api.post('/api/deploy/cloud', {
+  swarm_id: 'my-demo',
+  auto_destroy_hours: 2
+});
+// Wait for terraform_complete event
+
+// 4b. Get WiFi config from user
+const wifiConfig = { ssid: 'Office', password: '...' };
+
+// 4c. Detect and flash devices
+const devices = await api.get('/api/deploy/devices');
+for (const device of devices) {
+  await api.post('/api/deploy/flash', {
+    node_id: spec.nodes[i].node_id,
+    port: device.port,
+    wifi_config: wifiConfig,
+  });
+}
+// Watch flash progress via WebSocket
+
+// 5. Monitor live system
+// Connect to cloud server's MQTT WebSocket for real-time data
+const mqttWs = new WebSocket(terraformOutputs.mqtt_ws_url);
+```
+
 ## Future Enhancements
 
 - [x] ESP32 simulation via Wokwi API
+- [x] Terraform integration for cloud deployment
+- [x] Hardware flashing (ESP32, STM32)
 - [ ] Parallel multi-node Wokwi simulation
 - [ ] AVR simulation via simavr
 - [ ] Virtual CAN bus between STM32 nodes
-- [ ] Terraform integration for real cloud deployment
 - [ ] Real-time dashboard showing all node outputs
+- [ ] OTA firmware updates post-deployment
