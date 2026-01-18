@@ -30,10 +30,17 @@ class SessionState:
     simulate_task: Optional[asyncio.Task] = None
     
     # Deploy
-    flash_status: dict = field(default_factory=dict)
-    cloud_status: Optional[dict] = None
+    flash_status: dict = field(default_factory=dict)  # port -> FlashProgress
+    flash_assignments: dict = field(default_factory=dict)  # port -> node_id
+    cloud_status: str = "idle"  # TerraformStatus value
+    cloud_step: Optional[str] = None
+    cloud_message: Optional[str] = None
+    cloud_progress: int = 0
     terraform_outputs: Optional[dict] = None
-    
+    terraform_task: Optional[asyncio.Task] = None
+    deploy_settings: Optional[dict] = None
+    node_telemetry: dict = field(default_factory=dict)  # node_id -> telemetry
+
     # WebSocket connections
     websockets: list = field(default_factory=list)
 
@@ -63,7 +70,9 @@ class SessionManager:
                 session.build_task.cancel()
             if session.simulate_task and not session.simulate_task.done():
                 session.simulate_task.cancel()
-            
+            if session.terraform_task and not session.terraform_task.done():
+                session.terraform_task.cancel()
+
             del self.sessions[session_id]
     
     def list_sessions(self) -> list[str]:

@@ -68,32 +68,114 @@ class SimulateStatusResponse(BaseModel):
 class DeviceInfo(BaseModel):
     """Connected USB device information."""
     port: str
-    description: str
-    vid: Optional[str] = None
-    pid: Optional[str] = None
-    board_type: Optional[str] = None
+    board_type: str
+    chip_name: str
+    vid: str
+    pid: str
+    assigned_node: Optional[str] = None
+
+
+class NodeAssignment(BaseModel):
+    """Assignment of a node to a device port."""
+    node_id: str
+    port: str
+    firmware_path: Optional[str] = None
 
 
 class FlashRequest(BaseModel):
     """Request to flash firmware to device."""
-    session_id: str
     node_id: str
     port: str
 
 
+class FlashAllRequest(BaseModel):
+    """Request to flash multiple devices."""
+    assignments: list[NodeAssignment]
+
+
+class FlashProgress(BaseModel):
+    """Progress of a flash operation."""
+    port: str
+    node_id: str
+    status: str  # "idle" | "preparing" | "erasing" | "writing" | "verifying" | "complete" | "error"
+    percent: int = 0
+    stage: str = ""
+    message: Optional[str] = None
+    error: Optional[str] = None
+
+
 class CloudDeployRequest(BaseModel):
     """Request to deploy aggregation server to cloud."""
-    session_id: str
     swarm_id: str
     region: str = "us-east-1"
     instance_type: str = "t3.micro"
+    mqtt_port: int = 1883
+    http_port: int = 8080
+    auto_destroy_hours: int = 2
+
+
+class TerraformOutputs(BaseModel):
+    """Terraform deployment outputs."""
+    server_ip: str = ""
+    server_url: str = ""
+    mqtt_broker: str = ""
+    mqtt_port: int = 1883
+    mqtt_ws_url: str = ""
+    ssh_command: str = ""
+    instance_id: str = ""
+    swarm_id: str = ""
+
+
+class CloudStatus(BaseModel):
+    """Cloud deployment status."""
+    status: str  # "idle" | "initializing" | "planning" | "applying" | "deployed" | "destroying" | "destroyed" | "error"
+    step: Optional[str] = None
+    message: Optional[str] = None
+    progress_percent: int = 0
+    outputs: Optional[TerraformOutputs] = None
 
 
 class DeployStatusResponse(BaseModel):
-    """Deployment status."""
+    """Full deployment status."""
     session_id: str
-    flash_status: dict = Field(default_factory=dict)
-    cloud_status: Optional[dict] = None
+    flash_status: dict[str, FlashProgress] = Field(default_factory=dict)
+    cloud_status: CloudStatus = Field(default_factory=lambda: CloudStatus(status="idle"))
+    devices: list[DeviceInfo] = Field(default_factory=list)
+    assignments: dict[str, str] = Field(default_factory=dict)
+
+
+class DeploySettingsRequest(BaseModel):
+    """Deploy settings from frontend."""
+    # Network settings
+    wifi_ssid: Optional[str] = None
+    wifi_password: Optional[str] = None
+    mqtt_broker_override: Optional[str] = None
+
+    # Cloud settings
+    aws_region: str = "us-east-1"
+    instance_type: str = "t3.micro"
+    auto_destroy_hours: int = 2
+
+    # Hardware settings
+    auto_scan_enabled: bool = True
+    scan_interval_ms: int = 2000
+
+
+class NodeTelemetry(BaseModel):
+    """Telemetry data from a deployed node."""
+    node_id: str
+    online: bool = False
+    last_seen: Optional[str] = None
+    readings: dict = Field(default_factory=dict)
+    alerts: list[str] = Field(default_factory=list)
+
+
+class LiveStatusResponse(BaseModel):
+    """Live status of deployed nodes."""
+    session_id: str
+    nodes: dict[str, NodeTelemetry] = Field(default_factory=dict)
+    server_online: bool = False
+    last_updated: Optional[str] = None
 
 
 # WebSocket Event Models
