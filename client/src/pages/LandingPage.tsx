@@ -29,7 +29,7 @@ const LandingPage = () => {
     }, []);
 
     return (
-        <div className="min-h-screen bg-[#0a0a0a] text-white font-sans selection:bg-blue-500/30 overflow-x-hidden">
+        <div className="h-screen bg-[#0a0a0a] text-white font-sans selection:bg-blue-500/30 overflow-hidden relative">
             {/* Globe Background */}
             <div className="fixed inset-0 z-0 opacity-40">
                 <Suspense fallback={<div className="w-full h-full bg-[#0a0a0a]" />}>
@@ -51,8 +51,8 @@ const LandingPage = () => {
             {/* Navigation */}
             <nav className="relative z-20 flex items-center justify-between px-12 py-6 border-b border-white/[0.08] bg-black/40 backdrop-blur-md">
                 <div className="flex items-center gap-3">
-                    <img src={heliosLogo} alt="Helios" className="w-7 h-7 object-contain" />
-                    <span className="text-xl font-bold tracking-[0.02em] text-white">HELIOS</span>
+                    <img src={heliosLogo} alt="Helios" className="w-12 h-12 object-contain" />
+                    <span className="text-xl font-bold tracking-[0.02em] text-white"></span>
                 </div>
                 <div className="flex items-center gap-8 text-[13px] font-medium">
                     <a href="#capabilities" className="text-gray-400 hover:text-white transition-colors">Capabilities</a>
@@ -69,7 +69,7 @@ const LandingPage = () => {
             </nav>
 
             {/* Hero Section */}
-            <section className="relative z-10 min-h-[90vh] flex items-center justify-center px-12 py-20">
+            <section className="relative z-10 h-full flex items-center justify-center px-12 pb-20 pt-10">
                 <div className="max-w-6xl w-full">
                     {/* Status Badge */}
                     <motion.div
@@ -144,65 +144,6 @@ const LandingPage = () => {
                     </motion.div>
                 </div>
             </section>
-
-            {/* Capabilities Section */}
-            <section id="capabilities" className="relative z-10 px-12 py-32 border-t border-white/[0.08] bg-gradient-to-b from-transparent to-black/60">
-                <div className="max-w-7xl mx-auto">
-                    <div className="mb-16">
-                        <h2 className="text-sm font-mono text-gray-500 uppercase tracking-wider mb-4">CAPABILITIES</h2>
-                        <h3 className="text-4xl font-bold">Built for Mission-Critical Operations</h3>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <CapabilityCard
-                            icon={<Cpu className="w-6 h-6 text-blue-400" />}
-                            title="Generative Firmware"
-                            desc="AI-driven embedded code generation optimized for STM32 and ESP32 microcontrollers. Deploy production-ready firmware from natural language."
-                        />
-                        <CapabilityCard
-                            icon={<Shield className="w-6 h-6 text-emerald-400" />}
-                            title="Renode Simulation"
-                            desc="Validate swarm behavior in physics-accurate virtual environments before real-world deployment. Zero-risk testing at scale."
-                        />
-                        <CapabilityCard
-                            icon={<Radio className="w-6 h-6 text-purple-400" />}
-                            title="Real-Time Coordination"
-                            desc="Distributed mesh networking with autonomous decision-making. Swarms adapt and respond without centralized control."
-                        />
-                        <CapabilityCard
-                            icon={<GlobeIcon className="w-6 h-6 text-cyan-400" />}
-                            title="Cloud Aggregation"
-                            desc="Serverless telemetry infrastructure deployed via Terraform. Monitor thousands of nodes with millisecond latency."
-                        />
-                        <CapabilityCard
-                            icon={<Zap className="w-6 h-6 text-amber-400" />}
-                            title="Instant Deployment"
-                            desc="From concept to deployment in under 60 seconds. Automated toolchain handles compilation, flashing, and network provisioning."
-                        />
-                        <CapabilityCard
-                            icon={<Activity className="w-6 h-6 text-red-400" />}
-                            title="Mission Analytics"
-                            desc="Real-time insights into swarm health, performance, and objectives. Predictive maintenance and autonomous recovery."
-                        />
-                    </div>
-                </div>
-            </section>
-
-            {/* CTA Section */}
-            <section className="relative z-10 px-12 py-24 border-t border-white/[0.08]">
-                <div className="max-w-4xl mx-auto text-center">
-                    <h2 className="text-5xl font-bold mb-6">Ready to Deploy?</h2>
-                    <p className="text-xl text-gray-400 mb-12">
-                        Join the next generation of autonomous systems development.
-                    </p>
-                    <button
-                        onClick={() => navigate('/app')}
-                        className="px-8 py-4 bg-white text-black hover:bg-gray-200 transition-all text-sm font-bold tracking-wider uppercase"
-                    >
-                        ACCESS PLATFORM
-                    </button>
-                </div>
-            </section>
         </div>
     );
 };
@@ -214,14 +155,6 @@ const StatItem = ({ value, label }: { value: string, label: string }) => (
     </div>
 );
 
-const CapabilityCard = ({ icon, title, desc }: { icon: React.ReactNode, title: string, desc: string }) => (
-    <div className="group p-8 border border-white/[0.08] bg-black/40 hover:bg-black/60 hover:border-white/20 transition-all backdrop-blur-sm">
-        <div className="mb-6 p-3 bg-white/5 w-fit border border-white/10 group-hover:border-white/20 transition-colors">
-            {icon}
-        </div>
-        <h3 className="text-xl font-semibold text-white mb-3 tracking-tight">{title}</h3>
-        <p className="text-gray-400 text-sm leading-relaxed">{desc}</p>
-    </div>
-);
+
 
 export default LandingPage;
