@@ -96,35 +96,127 @@
     "name": "CMU Traffic Monitoring",
     "description": "Traffic Monitoring around CMU Campus",
     "created_at": "2026-01-18T10:03:38.698363",
-    "updated_at": "2026-01-18T10:03:38.759780",
+    "updated_at": "2026-01-18T10:53:53.070839",
     "current_stage": "design",
     "spec": {
-      "prompt": "",
+      "prompt": "Measuring the cars that come past on every individual road segment as a means to eventually do meta-analysis of traffic flow patterns",
       "nodes": [
         {
-          "node_id": "lm3s6965_ftcls9jeo",
-          "description": "Best QEMU support for simulation",
+          "node_id": "lm3s6965_dlvqs7mlo",
+          "description": "LM3S6965 (Recommended)",
           "board_type": "lm3s6965",
-          "lat": 40.44383124969693,
-          "lng": -79.94008405708216
+          "lat": 40.44477618803296,
+          "lng": -79.94316414877142
         },
         {
-          "node_id": "stm32f407vg_r42b11748",
-          "description": "High-performance ARM MCU",
-          "board_type": "stm32f407vg",
-          "lat": 40.44452985118437,
-          "lng": -79.94268620350972
+          "node_id": "Forbes n Beeler",
+          "description": "LM3S6965 (Recommended)",
+          "board_type": "lm3s6965",
+          "lat": 40.44407181553123,
+          "lng": -79.93874125848872
         },
         {
-          "node_id": "arduino_due_totjtnwdz",
-          "description": "32-bit ARM Arduino (QEMU supported)",
-          "board_type": "arduino_due",
-          "lat": 40.44312540139842,
-          "lng": -79.94284211091761
+          "node_id": "Forbes n Margaret",
+          "description": "LM3S6965 (Recommended)",
+          "board_type": "lm3s6965",
+          "lat": 40.44272655901358,
+          "lng": -79.93788399158977
+        },
+        {
+          "node_id": "Margaret and Skibo",
+          "description": "LM3S6965 (Recommended)",
+          "board_type": "lm3s6965",
+          "lat": 40.441693060398165,
+          "lng": -79.94031165006396
+        },
+        {
+          "node_id": "Frew n Tech",
+          "description": "LM3S6965 (Recommended)",
+          "board_type": "lm3s6965",
+          "lat": 40.44069933591675,
+          "lng": -79.9423175672721
+        },
+        {
+          "node_id": "Frew n Scheneley",
+          "description": "LM3S6965 (Recommended)",
+          "board_type": "lm3s6965",
+          "lat": 40.440837108763844,
+          "lng": -79.9479155506846
+        },
+        {
+          "node_id": "Scheneley n Neville",
+          "description": "LM3S6965 (Recommended)",
+          "board_type": "lm3s6965",
+          "lat": 40.44139426522307,
+          "lng": -79.94901388045992
+        },
+        {
+          "node_id": "Forbes n S Neville",
+          "description": "LM3S6965 (Recommended)",
+          "board_type": "lm3s6965",
+          "lat": 40.44439203882246,
+          "lng": -79.94671760771213
+        },
+        {
+          "node_id": "Forbes n Morewood",
+          "description": "LM3S6965 (Recommended)",
+          "board_type": "lm3s6965",
+          "lat": 40.44478780469336,
+          "lng": -79.94315163793247
         }
       ],
       "connections": [
         {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {}
+      ]
+    },
+    "design_complete": true,
+    "build_complete": false,
+    "simulate_complete": false,
+    "deploy_complete": false,
+    "build_results": null,
+    "cloud_status": "idle",
+    "terraform_outputs": null
+  },
+  "20be4fa8-e89a-47d3-9a72-c6ef23843ea8": {
+    "id": "20be4fa8-e89a-47d3-9a72-c6ef23843ea8",
+    "name": "cc",
+    "description": null,
+    "created_at": "2026-01-18T10:53:53.020891",
+    "updated_at": "2026-01-18T10:55:50.980532",
+    "current_stage": "design",
+    "spec": {
+      "prompt": "Measuring the cars that come past on every individual road segment as a means to eventually do meta-analysis of traffic flow patterns",
+      "nodes": [
+        {
+          "node_id": "lm3s6965_7qor621x1",
+          "description": "LM3S6965 (Recommended)",
+          "board_type": "lm3s6965",
+          "lat": 40.44471845285997,
+          "lng": -79.94470419461528
+        },
+        {
+          "node_id": "lm3s6965_jjobvif3e",
+          "description": "LM3S6965 (Recommended)",
+          "board_type": "lm3s6965",
+          "lat": 40.44399675900951,
+          "lng": -79.93877919065189
+        },
+        {
+          "node_id": "lm3s6965_oh52ba7vu",
+          "description": "LM3S6965 (Recommended)",
+          "board_type": "lm3s6965",
+          "lat": 40.44160140835422,
+          "lng": -79.94028663128884
+        }
+      ],
+      "connections": [
         {},
         {}
       ]

@@ -4,11 +4,13 @@
  * Displays firmware generation progress with node list and detail panel.
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useBuild } from '../hooks/useBuild';
 import { useProjects } from '../hooks/useProjects';
 import { useProjectStore } from '../stores/projectStore';
+import { useDesignStore } from '../stores/designStore';
+import { buildApi, BuildNode } from '../api/client';
 import { NodeList } from '../components/build/NodeList';
 import { DetailPanel } from '../components/build/DetailPanel';
 import { BuildProgress } from '../components/build/BuildProgress';
@@ -30,7 +32,11 @@ export default function BuildPage() {
   const { id: sessionId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [isStartingBuild, setIsStartingBuild] = useState(false);
+  const buildStartedRef = useRef(false);
   const currentProject = useProjectStore((state) => state.currentProject);
+  const devices = useDesignStore((state) => state.devices);
+  const settings = useDesignStore((state) => state.settings);
   const { loadProject } = useProjects();
   const projectName = currentProject?.name || 'Build';
 
@@ -61,6 +67,50 @@ export default function BuildPage() {
       loadSession(sessionId);
     }
   }, [sessionId, loadSession]);
+
+  // Auto-start build if no build is running and we have devices
+  useEffect(() => {
+    const shouldStartBuild =
+      sessionId &&
+      status === 'idle' &&
+      totalCount === 0 &&
+      devices.length > 0 &&
+      !isStartingBuild &&
+      !buildStartedRef.current;
+
+    if (shouldStartBuild) {
+      buildStartedRef.current = true;
+      setIsStartingBuild(true);
+
+      // Build nodes from devices
+      const buildNodes: BuildNode[] = devices.map(d => ({
+        node_id: d.nodeId,
+        description: d.description || d.name,
+        board_type: d.boardType || settings.hardware.defaultBoard,
+        assertions: d.assertions.map(a => ({
+          name: a.description,
+          pattern: a.condition,
+          required: true,
+        })),
+      }));
+
+      const defaultBoardId = devices[0]?.boardType || settings.hardware.defaultBoard;
+
+      buildApi.start({
+        description: settings.general.description || 'Swarm Build',
+        board_id: defaultBoardId,
+        nodes: buildNodes,
+        session_id: sessionId,
+      }).then(() => {
+        // Reload session to get the build state
+        loadSession(sessionId);
+      }).catch((err) => {
+        console.error('Failed to auto-start build:', err);
+      }).finally(() => {
+        setIsStartingBuild(false);
+      });
+    }
+  }, [sessionId, status, totalCount, devices, settings, isStartingBuild, loadSession]);
 
   // Auto-select current building node
   useEffect(() => {

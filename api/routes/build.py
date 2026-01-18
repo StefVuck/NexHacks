@@ -564,8 +564,18 @@ Required output patterns (must appear in semihosting output):
 async def get_build_status(session_id: str) -> BuildStatusResponse:
     """Get current build status with all node states."""
     session = session_manager.get_session(session_id)
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
+
+    # If no session or no build started yet, return idle state
+    if not session or not session.build_state or not session.build_state.nodes:
+        return BuildStatusResponse(
+            session_id=session_id,
+            status="idle",
+            current_node=None,
+            current_iteration=0,
+            completed_count=0,
+            total_count=0,
+            nodes={},
+        )
 
     build = session.build_state
     current_node = None

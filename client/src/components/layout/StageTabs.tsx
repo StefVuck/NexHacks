@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useDesignStore } from '../../stores/designStore';
 import type { Stage, StageStatus } from '../../types/design';
 import { cn } from '../../lib/utils';
@@ -66,16 +67,17 @@ interface StageTabsProps {
 }
 
 export const StageTabs: React.FC<StageTabsProps> = ({ className }) => {
+  const navigate = useNavigate();
   const stages = useDesignStore((state) => state.stages);
   const currentStage = useDesignStore((state) => state.currentStage);
+  const projectId = useDesignStore((state) => state.projectId);
   const setCurrentStage = useDesignStore((state) => state.setCurrentStage);
   const canNavigateToStage = useDesignStore((state) => state.canNavigateToStage);
 
   const handleStageClick = (stage: Stage) => {
-    if (canNavigateToStage(stage)) {
+    if (canNavigateToStage(stage) && projectId) {
       setCurrentStage(stage);
-      // TODO: API call or navigation to stage-specific route
-      // navigate(`/${stage}/${projectId}`);
+      navigate(`/${stage}/${projectId}`);
     }
   };
 

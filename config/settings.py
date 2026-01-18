@@ -40,7 +40,8 @@ class Settings:
     default_board_id: str = "lm3s6965"
 
     # Demo/simulation mode
-    simulate_hardware: bool = False  # Simulate USB devices for demo
+    simulate_hardware: bool = True  # Simulate USB devices for demo
+    simulate_cloud: bool = True  # Simulate Terraform deployment with hardcoded IP
 
     def __post_init__(self):
         """Load values from environment variables."""
@@ -58,7 +59,15 @@ class Settings:
         self.claude_model = os.getenv("CLAUDE_MODEL", self.claude_model)
         self.wokwi_cli_token = os.getenv("WOKWI_CLI_TOKEN", self.wokwi_cli_token)
         self.default_board_id = os.getenv("DEFAULT_BOARD_ID", self.default_board_id)
-        self.simulate_hardware = os.getenv("SIMULATE_HARDWARE", "").lower() in ("true", "1", "yes")
+        # Demo mode: default True for hardware, set SIMULATE_HARDWARE=false to disable
+        sim_env = os.getenv("SIMULATE_HARDWARE", "").lower()
+        if sim_env:
+            self.simulate_hardware = sim_env in ("true", "1", "yes")
+
+        # Cloud simulation: default False (use real Terraform)
+        sim_cloud_env = os.getenv("SIMULATE_CLOUD", "").lower()
+        if sim_cloud_env:
+            self.simulate_cloud = sim_cloud_env in ("true", "1", "yes")
 
         # Parse CORS origins from env if provided
         cors_env = os.getenv("CORS_ORIGINS")

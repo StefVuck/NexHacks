@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDesignStore } from '../../stores/designStore';
 import { useProjectStore } from '../../stores/projectStore';
+import { useDesign } from '../../hooks/useDesign';
 import { StageTabs } from './StageTabs';
 import { ProgressIndicator } from './ProgressIndicator';
 import { cn } from '../../lib/utils';
@@ -37,16 +38,20 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   const isDirty = useDesignStore((state) => state.isDirty);
   const isLoading = useDesignStore((state) => state.isLoading);
   const lastSaved = useDesignStore((state) => state.lastSaved);
+  const projectId = useDesignStore((state) => state.projectId);
   const openSettingsModal = useDesignStore((state) => state.openSettingsModal);
+  const { saveProject } = useDesign(projectId);
 
   // Use prop > current project > design store name
   const projectName = propProjectName || currentProject?.name || designStoreName || 'Untitled Project';
 
   const handleSave = async () => {
-    // TODO: API call to POST /api/design/save
-    // const response = await api.saveDesign(projectId, getState());
-    // markSaved();
-    console.log('Save triggered - TODO: implement API call');
+    const result = await saveProject();
+    if (result) {
+      console.log('Project saved successfully');
+    } else {
+      console.error('Failed to save project');
+    }
   };
 
   const formatLastSaved = (timestamp: number | null) => {

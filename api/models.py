@@ -334,7 +334,6 @@ class FlashProgress(BaseModel):
 class CloudDeployRequest(BaseModel):
     """Request to deploy aggregation server to cloud."""
 
-    session_id: str
     swarm_id: str
     region: str = "us-east-1"
     instance_type: str = "t3.micro"

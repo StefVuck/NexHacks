@@ -132,23 +132,27 @@ class TerraformRunner:
                     self._process.terminate()
                     break
 
-                line = await asyncio.wait_for(
-                    self._process.stdout.readline(),
-                    timeout=1.0,
-                )
+                try:
+                    line = await asyncio.wait_for(
+                        self._process.stdout.readline(),
+                        timeout=60.0,  # Terraform can be slow
+                    )
+                except asyncio.TimeoutError:
+                    # Check if process is still running
+                    if self._process.returncode is not None:
+                        break
+                    continue
 
                 if not line:
                     break
 
                 yield line.decode("utf-8").rstrip()
-        except asyncio.TimeoutError:
-            pass
         except Exception as e:
             yield f"Error: {str(e)}"
         finally:
             if self._process.returncode is None:
                 try:
-                    await asyncio.wait_for(self._process.wait(), timeout=5.0)
+                    await asyncio.wait_for(self._process.wait(), timeout=30.0)
                 except asyncio.TimeoutError:
                     self._process.kill()
 
@@ -217,7 +221,17 @@ class TerraformRunner:
         Returns:
             True if init succeeded
         """
-        working_dir = await self._setup_working_dir(session_id)
+        try:
+            working_dir = await self._setup_working_dir(session_id)
+            print(f"[Terraform] Working directory: {working_dir}")
+        except Exception as e:
+            print(f"[Terraform] Failed to setup working dir: {e}")
+            await self._emit_progress(TerraformProgress(
+                status=TerraformStatus.ERROR,
+                step="Setup failed",
+                message=str(e),
+            ))
+            return False
 
         await self._emit_progress(TerraformProgress(
             status=TerraformStatus.INITIALIZING,
@@ -225,29 +239,52 @@ class TerraformRunner:
             progress_percent=0,
         ))
 
-        cmd = ["terraform", "init", "-no-color"]
-        success = True
+        # Use simpler subprocess handling for init
+        try:
+            process = await asyncio.create_subprocess_exec(
+                "terraform", "init", "-no-color",
+                cwd=working_dir,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.STDOUT,
+            )
 
-        async for line in self._run_command(cmd, working_dir):
-            if "Error" in line or "error" in line.lower():
-                success = False
+            stdout, _ = await asyncio.wait_for(process.communicate(), timeout=120.0)
+            output = stdout.decode("utf-8") if stdout else ""
+            print(f"[Terraform init] Output:\n{output}")
+
+            if process.returncode != 0:
+                print(f"[Terraform] Init failed with return code: {process.returncode}")
                 await self._emit_progress(TerraformProgress(
                     status=TerraformStatus.ERROR,
                     step="Init failed",
-                    message=line,
+                    message=output[:500] if output else "Unknown error",
                 ))
+                return False
 
-        if self._process and self._process.returncode != 0:
-            success = False
-
-        if success:
+            print("[Terraform] Init succeeded")
             await self._emit_progress(TerraformProgress(
                 status=TerraformStatus.INITIALIZING,
                 step="Init complete",
                 progress_percent=20,
             ))
+            return True
 
-        return success
+        except asyncio.TimeoutError:
+            print("[Terraform] Init timed out")
+            await self._emit_progress(TerraformProgress(
+                status=TerraformStatus.ERROR,
+                step="Init timed out",
+                message="Terraform init took too long",
+            ))
+            return False
+        except Exception as e:
+            print(f"[Terraform] Init exception: {e}")
+            await self._emit_progress(TerraformProgress(
+                status=TerraformStatus.ERROR,
+                step="Init failed",
+                message=str(e),
+            ))
+            return False
 
     async def apply(
         self,

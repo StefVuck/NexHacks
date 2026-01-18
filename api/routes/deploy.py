@@ -348,7 +348,18 @@ async def check_cloud_prerequisites():
     Check if cloud deployment prerequisites are met.
 
     Returns status of Terraform and AWS credentials.
+    In demo mode (SIMULATE_CLOUD=true), always returns ready=True.
     """
+    # In cloud demo mode, skip real prerequisite checks
+    if settings.simulate_cloud:
+        return {
+            "terraform_installed": True,
+            "aws_configured": True,
+            "ready": True,
+            "demo_mode": True,
+            "messages": [],
+        }
+
     runner = TerraformRunner(INFRA_DIR, TERRAFORM_WORKING_DIR)
 
     terraform_installed = await runner.check_installed()
@@ -358,6 +369,7 @@ async def check_cloud_prerequisites():
         "terraform_installed": terraform_installed,
         "aws_configured": aws_configured,
         "ready": terraform_installed and aws_configured,
+        "demo_mode": False,
         "messages": [
             None if terraform_installed else "Terraform not found. Install from terraform.io",
             None if aws_configured else "AWS credentials not configured. Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY",
@@ -376,6 +388,7 @@ async def start_cloud_deployment(session_id: str, request: CloudDeployRequest):
     - terraform_outputs (final outputs)
     - terraform_error (on failure)
 
+    In demo mode (SIMULATE_HARDWARE=true), simulates deployment without Terraform.
     """
     session = session_manager.get_session(session_id)
     if not session:
@@ -384,7 +397,104 @@ async def start_cloud_deployment(session_id: str, request: CloudDeployRequest):
     if session.cloud_status in ["applying", "initializing", "planning"]:
         raise HTTPException(status_code=400, detail="Deployment already in progress")
 
-    # Check prerequisites
+    # Cloud demo mode - simulate deployment without Terraform
+    if settings.simulate_cloud:
+        session.cloud_status = "initializing"
+        session.cloud_step = "Starting deployment"
+        session.cloud_progress = 0
+
+        # Hardcoded server IP for demo - replace with your actual server
+        DEMO_SERVER_IP = "18.234.112.45"  # TODO: Replace with actual deployed server IP
+
+        async def simulate_deployment():
+            # Realistic Terraform-like deployment stages
+            stages = [
+                # Init phase
+                ("initializing", "Initializing Terraform backend...", 5, 0.5),
+                ("initializing", "Initializing provider plugins...", 8, 0.8),
+                ("initializing", "Finding hashicorp/aws versions matching ~> 5.0...", 10, 0.6),
+                ("initializing", "Installing hashicorp/aws v5.100.0...", 15, 1.2),
+                ("initializing", "Terraform has been successfully initialized!", 18, 0.3),
+
+                # Plan phase
+                ("planning", "Creating execution plan...", 20, 0.5),
+                ("planning", "data.aws_ami.ubuntu: Reading...", 22, 0.4),
+                ("planning", "data.aws_ami.ubuntu: Read complete [id=ami-0030e4319cbf4dbf2]", 25, 0.3),
+                ("planning", "Plan: 3 to add, 0 to change, 0 to destroy", 30, 0.5),
+
+                # Apply phase - Security Group
+                ("applying", "aws_security_group.aggregation_server: Creating...", 35, 0.8),
+                ("applying", "aws_security_group.aggregation_server: Creation complete [id=sg-0abc123def456]", 40, 0.3),
+
+                # Apply phase - EC2 Instance
+                ("applying", "aws_instance.aggregation_server: Creating...", 45, 1.0),
+                ("applying", "aws_instance.aggregation_server: Still creating... [10s elapsed]", 50, 2.0),
+                ("applying", "aws_instance.aggregation_server: Still creating... [20s elapsed]", 55, 2.0),
+                ("applying", "aws_instance.aggregation_server: Still creating... [30s elapsed]", 60, 2.0),
+                ("applying", "aws_instance.aggregation_server: Creation complete [id=i-0abc123def456789]", 70, 0.5),
+
+                # Apply phase - Elastic IP
+                ("applying", "aws_eip.aggregation_server: Creating...", 75, 0.6),
+                ("applying", "aws_eip.aggregation_server: Creation complete [id=eipalloc-0abc123]", 80, 0.3),
+
+                # Provisioning
+                ("applying", "Waiting for server to initialize...", 85, 1.5),
+                ("applying", "Installing Docker and dependencies...", 88, 1.0),
+                ("applying", "Starting MQTT broker (Mosquitto)...", 92, 0.8),
+                ("applying", "Starting aggregation server...", 95, 0.6),
+                ("applying", "Apply complete! Resources: 3 added, 0 changed, 0 destroyed.", 98, 0.5),
+
+                # Complete
+                ("deployed", "Deployment complete!", 100, 0.3),
+            ]
+
+            for status, step, progress, delay in stages:
+                session.cloud_status = status
+                session.cloud_step = step
+                session.cloud_progress = progress
+
+                # Determine message type based on content
+                msg_type = "terraform_progress" if any(x in step for x in ["aws_", "data.", "Plan:", "Apply complete"]) else "cloud_status"
+
+                await session_manager.broadcast_to_session(session_id, {
+                    "stage": "deploy",
+                    "type": msg_type,
+                    "data": {
+                        "status": status,
+                        "step": step,
+                        "progress_percent": progress,
+                        "message": step,
+                    }
+                })
+                await asyncio.sleep(delay)
+
+            # Set outputs with hardcoded demo server IP
+            session.terraform_outputs = {
+                "server_ip": DEMO_SERVER_IP,
+                "server_url": f"http://{DEMO_SERVER_IP}:8080",
+                "mqtt_broker": DEMO_SERVER_IP,
+                "mqtt_port": 1883,
+                "mqtt_ws_url": f"ws://{DEMO_SERVER_IP}:9001",
+                "ssh_command": f"ssh -i ~/.ssh/swarm-key.pem ubuntu@{DEMO_SERVER_IP}",
+                "instance_id": "i-0abc123def456789",
+                "swarm_id": request.swarm_id,
+            }
+
+            await session_manager.broadcast_to_session(session_id, {
+                "stage": "deploy",
+                "type": "terraform_outputs",
+                "data": session.terraform_outputs,
+            })
+
+        asyncio.create_task(simulate_deployment())
+        return {
+            "status": "started",
+            "message": f"Simulating deployment to {request.region} (demo mode)",
+            "swarm_id": request.swarm_id,
+            "demo_mode": True,
+        }
+
+    # Real deployment - check prerequisites
     runner = TerraformRunner(INFRA_DIR, TERRAFORM_WORKING_DIR)
     if not await runner.check_installed():
         raise HTTPException(status_code=400, detail="Terraform not installed")
@@ -776,28 +886,101 @@ def _get_session_node_ids(session) -> list[str]:
     return []
 
 
+def _parse_node_data_types(description: str) -> dict:
+    """Parse node description to determine what data types to generate."""
+    desc_lower = description.lower()
+    data_types = {}
+
+    # Traffic/vehicle counting
+    if any(k in desc_lower for k in ["traffic", "vehicle", "car", "count"]):
+        data_types["vehicle_count"] = {"min": 0, "max": 150, "unit": "vehicles"}
+        data_types["avg_speed"] = {"min": 20, "max": 80, "unit": "km/h"}
+
+    # Temperature sensors
+    if any(k in desc_lower for k in ["temperature", "temp", "thermal", "heat"]):
+        data_types["temperature"] = {"min": 15, "max": 35, "unit": "°C"}
+
+    # Humidity sensors
+    if any(k in desc_lower for k in ["humidity", "moisture"]):
+        data_types["humidity"] = {"min": 30, "max": 80, "unit": "%"}
+
+    # Air quality
+    if any(k in desc_lower for k in ["air", "pollution", "co2", "pm2.5", "quality"]):
+        data_types["air_quality_index"] = {"min": 0, "max": 200, "unit": "AQI"}
+        data_types["pm25"] = {"min": 5, "max": 100, "unit": "µg/m³"}
+
+    # Light/luminosity
+    if any(k in desc_lower for k in ["light", "lux", "brightness", "luminosity"]):
+        data_types["light_level"] = {"min": 0, "max": 1000, "unit": "lux"}
+
+    # Motion/presence
+    if any(k in desc_lower for k in ["motion", "presence", "occupancy", "people"]):
+        data_types["motion_detected"] = {"type": "bool"}
+        data_types["occupancy_count"] = {"min": 0, "max": 20, "unit": "people"}
+
+    # Power/energy
+    if any(k in desc_lower for k in ["power", "energy", "watt", "electricity"]):
+        data_types["power_consumption"] = {"min": 0, "max": 5000, "unit": "W"}
+
+    # Water/flow
+    if any(k in desc_lower for k in ["water", "flow", "liquid", "level"]):
+        data_types["flow_rate"] = {"min": 0, "max": 100, "unit": "L/min"}
+        data_types["water_level"] = {"min": 0, "max": 100, "unit": "%"}
+
+    # Default fallback - generic sensor data
+    if not data_types:
+        data_types["value"] = {"min": 0, "max": 100, "unit": ""}
+        data_types["status"] = {"type": "status"}
+
+    return data_types
+
+
 async def _generate_telemetry_update(session_id: str, session, node_ids: list[str]):
-    """Generate and broadcast telemetry for all nodes."""
+    """Generate and broadcast telemetry for all nodes based on their descriptions."""
     import random
 
+    # Get node descriptions from session
+    node_descriptions = {}
+    if session.system_spec and session.system_spec.get("nodes"):
+        for node in session.system_spec["nodes"]:
+            nid = node.get("node_id", node.get("id", ""))
+            node_descriptions[nid] = node.get("description", "")
+    if session.build_state and session.build_state.nodes:
+        for nid, node_state in session.build_state.nodes.items():
+            if hasattr(node_state, 'description'):
+                node_descriptions[nid] = node_state.description
+
     for node_id in node_ids:
-        # Simulate sensor readings with some variance
-        base_temp = 22 + hash(node_id) % 10  # Consistent base per node
-        base_humidity = 45 + hash(node_id) % 20
+        description = node_descriptions.get(node_id, "")
+        data_types = _parse_node_data_types(description)
 
-        readings = {
-            "temperature": round(base_temp + random.uniform(-2, 5), 1),
-            "humidity": round(base_humidity + random.uniform(-5, 10), 1),
-            "battery": round(85 + random.uniform(-10, 15), 0),
-            "rssi": round(-50 + random.uniform(-20, 10), 0),
-        }
+        # Generate readings based on detected data types
+        readings = {}
+        for key, config in data_types.items():
+            if config.get("type") == "bool":
+                readings[key] = random.random() > 0.7
+            elif config.get("type") == "status":
+                readings[key] = random.choice(["active", "idle", "standby"])
+            else:
+                min_val = config.get("min", 0)
+                max_val = config.get("max", 100)
+                # Add some consistency per node
+                base = min_val + (hash(node_id + key) % int((max_val - min_val) * 0.5))
+                variance = (max_val - min_val) * 0.2
+                value = base + random.uniform(-variance, variance)
+                readings[key] = round(value, 1) if isinstance(min_val, float) or variance < 10 else int(value)
 
-        # Check for alerts
+        # Add common fields
+        readings["rssi"] = round(-50 + random.uniform(-20, 10), 0)
+
+        # Check for alerts based on data
         alerts = []
-        if readings["temperature"] > 30:
+        if readings.get("temperature", 0) > 32:
             alerts.append(f"High temperature: {readings['temperature']}°C")
-        if readings["battery"] < 20:
-            alerts.append(f"Low battery: {readings['battery']}%")
+        if readings.get("air_quality_index", 0) > 150:
+            alerts.append(f"Poor air quality: AQI {readings['air_quality_index']}")
+        if readings.get("vehicle_count", 0) > 120:
+            alerts.append(f"Heavy traffic: {readings['vehicle_count']} vehicles")
 
         # Occasional offline status (5% chance)
         online = random.random() > 0.05
