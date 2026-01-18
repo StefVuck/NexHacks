@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 load_dotenv()
 
-from api.routes import build, simulate, deploy, design, woodwide
+from api.routes import build, simulate, deploy, design, woodwide, woodwide_ai
 from api.websocket import router as ws_router
 
 
@@ -50,6 +50,7 @@ app.include_router(build.router, prefix="/api/build", tags=["build"])
 app.include_router(simulate.router, prefix="/api/simulate", tags=["simulate"])
 app.include_router(deploy.router, prefix="/api/deploy", tags=["deploy"])
 app.include_router(woodwide.router)  # Woodwide CSV service
+app.include_router(woodwide_ai.router)  # Woodwide AI analytics
 app.include_router(ws_router, tags=["websocket"])
 
 
