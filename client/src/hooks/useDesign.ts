@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useDesignStore } from '../stores/designStore';
 import { useProjectStore } from '../stores/projectStore';
 import { buildApi } from '../api/client';
@@ -14,6 +14,44 @@ import type { BuildNode } from '../api/client';
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 /**
+ * Save project spec to backend (standalone function for use before state changes)
+ */
+async function saveProjectToBackend(
+  projectId: string,
+  devices: Device[],
+  connections: Connection[],
+  prompt: string,
+  description: string
+) {
+  if (!projectId || devices.length === 0) return;
+
+  try {
+    const spec = {
+      prompt: prompt || description,
+      nodes: devices.map(d => ({
+        node_id: d.nodeId,
+        description: d.description || d.name,
+        board_type: d.boardType,
+        lat: d.position.y,
+        lng: d.position.x,
+      })),
+      connections: connections.map(c => ({
+        from: c.from,
+        to: c.to,
+      })),
+    };
+
+    await fetch(`${API_BASE}/api/projects/${projectId}/spec`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(spec),
+    });
+  } catch (error) {
+    console.error('Failed to auto-save project:', error);
+  }
+}
+
+/**
  * Hook for design-related API operations
  */
 export function useDesign(projectId?: string) {
@@ -23,22 +61,61 @@ export function useDesign(projectId?: string) {
     markSaved,
     markDirty,
     importDesign,
+    resetProject,
     devices,
     connections,
     settings,
     mode,
     prompt,
+    projectId: currentProjectId,
   } = useDesignStore();
 
   const { setCurrentProject } = useProjectStore();
 
-  // Load project on mount if projectId provided
+  // Track previous project ID to save before switching
+  const prevProjectIdRef = useRef<string | undefined>(currentProjectId);
+
+  // Save current project and load new one when projectId changes
   useEffect(() => {
-    if (projectId) {
+    if (projectId && currentProjectId !== projectId) {
+      // Save the previous project before switching (if it had devices)
+      const prevId = prevProjectIdRef.current;
+      if (prevId && prevId !== projectId) {
+        // Get current state before it changes
+        const state = useDesignStore.getState();
+        if (state.devices.length > 0) {
+          saveProjectToBackend(
+            prevId,
+            state.devices,
+            state.connections,
+            state.prompt,
+            state.settings.general.description
+          );
+        }
+      }
+
+      // Update ref and load new project
+      prevProjectIdRef.current = projectId;
       setProjectId(projectId);
       loadProject(projectId);
     }
-  }, [projectId]);
+  }, [projectId, currentProjectId]);
+
+  // Save project when component unmounts (navigating away from design page)
+  useEffect(() => {
+    return () => {
+      const state = useDesignStore.getState();
+      if (state.projectId && state.devices.length > 0) {
+        saveProjectToBackend(
+          state.projectId,
+          state.devices,
+          state.connections,
+          state.prompt,
+          state.settings.general.description
+        );
+      }
+    };
+  }, []);
 
   /**
    * Load an existing design project from the backend
@@ -51,7 +128,7 @@ export function useDesign(projectId?: string) {
         const project = await response.json();
         setCurrentProject(project);
 
-        // If project has saved spec, import it
+        // Always clear existing design state first, then import project data
         if (project.spec && project.spec.nodes && project.spec.nodes.length > 0) {
           // Map project spec nodes to design devices
           const importedDevices = project.spec.nodes.map((node: any) => ({
@@ -64,10 +141,10 @@ export function useDesign(projectId?: string) {
             features: [],
             assertions: [],
           }));
-
-          if (importedDevices.length > 0) {
-            importDesign(importedDevices, project.spec.connections || []);
-          }
+          importDesign(importedDevices, project.spec.connections || []);
+        } else {
+          // No devices in project - clear the design
+          importDesign([], []);
         }
         console.log('Loaded project:', project.name);
       }

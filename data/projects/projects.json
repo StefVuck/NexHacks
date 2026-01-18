@@ -4,27 +4,82 @@
     "name": "aaa",
     "description": "aa",
     "created_at": "2026-01-18T02:25:56.203021",
-    "updated_at": "2026-01-18T02:35:55.114964",
+    "updated_at": "2026-01-18T09:03:24.942209",
     "current_stage": "build",
     "spec": {
       "prompt": "",
       "nodes": [
         {
-          "node_id": "stm32f103c8_vzhq5kqig",
-          "description": "ARM Cortex-M3 MCU",
-          "board_type": "stm32f103c8",
-          "lat": 40.4432,
-          "lng": -79.9428
+          "node_id": "lm3s6965_ftcls9jeo",
+          "description": "Best QEMU support for simulation",
+          "board_type": "lm3s6965",
+          "lat": 40.44383124969693,
+          "lng": -79.94008405708216
         },
+        {
+          "node_id": "stm32f407vg_r42b11748",
+          "description": "High-performance ARM MCU",
+          "board_type": "stm32f407vg",
+          "lat": 40.44452985118437,
+          "lng": -79.94268620350972
+        },
+        {
+          "node_id": "arduino_due_totjtnwdz",
+          "description": "32-bit ARM Arduino (QEMU supported)",
+          "board_type": "arduino_due",
+          "lat": 40.44312540139842,
+          "lng": -79.94284211091761
+        }
+      ],
+      "connections": [
+        {},
+        {},
+        {}
+      ]
+    },
+    "design_complete": true,
+    "build_complete": false,
+    "simulate_complete": false,
+    "deploy_complete": false,
+    "build_results": null,
+    "cloud_status": "idle",
+    "terraform_outputs": null
+  },
+  "4cf52489-cb2b-49df-b527-fa138b8d0b36": {
+    "id": "4cf52489-cb2b-49df-b527-fa138b8d0b36",
+    "name": "bbb",
+    "description": "bbb",
+    "created_at": "2026-01-18T08:53:13.951700",
+    "updated_at": "2026-01-18T09:03:24.949236",
+    "current_stage": "design",
+    "spec": {
+      "prompt": "",
+      "nodes": [
         {
           "node_id": "lm3s6965_ftcls9jeo",
           "description": "Best QEMU support for simulation",
           "board_type": "lm3s6965",
-          "lat": 40.44420051057659,
-          "lng": -79.9392630723445
+          "lat": 40.44383124969693,
+          "lng": -79.94008405708216
+        },
+        {
+          "node_id": "stm32f407vg_r42b11748",
+          "description": "High-performance ARM MCU",
+          "board_type": "stm32f407vg",
+          "lat": 40.44452985118437,
+          "lng": -79.94268620350972
+        },
+        {
+          "node_id": "arduino_due_totjtnwdz",
+          "description": "32-bit ARM Arduino (QEMU supported)",
+          "board_type": "arduino_due",
+          "lat": 40.44312540139842,
+          "lng": -79.94284211091761
         }
       ],
       "connections": [
+        {},
+        {},
         {}
       ]
     },
