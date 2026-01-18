@@ -183,33 +183,47 @@ class QEMUOrchestrator:
                 stderr=asyncio.subprocess.PIPE,
             )
 
+            # Collect output as it arrives
+            stdout_chunks = []
+            stderr_chunks = []
+
+            async def stream_reader(stream, chunks):
+                while True:
+                    chunk = await stream.read(4096)
+                    if not chunk:
+                        break
+                    chunks.append(chunk)
+
+            stdout_task = asyncio.create_task(stream_reader(proc.stdout, stdout_chunks))
+            stderr_task = asyncio.create_task(stream_reader(proc.stderr, stderr_chunks))
+
+            timed_out = False
             try:
-                stdout, stderr = await asyncio.wait_for(
-                    proc.communicate(),
-                    timeout=config.timeout_seconds,
-                )
-
-                # Semihosting outputs to stderr, use it as program output
-                return SimulationResult(
-                    success=True,  # If we got here, simulation ran
-                    stdout=stderr.decode(),  # Semihosting output
-                    stderr="",
-                    exit_code=proc.returncode,
-                    memory=memory,
-                )
-
+                await asyncio.wait_for(proc.wait(), timeout=config.timeout_seconds)
             except asyncio.TimeoutError:
+                timed_out = True
                 proc.kill()
                 await proc.wait()
-                # Semihosting outputs to stderr, not stdout
-                stderr = await proc.stderr.read() if proc.stderr else b""
 
-                return SimulationResult(
-                    success=True,  # Timeout is expected for embedded loops
-                    stdout=stderr.decode(),  # Use stderr as program output
-                    timeout=True,
-                    memory=memory,
-                )
+            # Give readers a moment to finish after process ends
+            await asyncio.sleep(0.1)
+            stdout_task.cancel()
+            stderr_task.cancel()
+
+            stdout_data = b"".join(stdout_chunks)
+            stderr_data = b"".join(stderr_chunks)
+
+            # Semihosting with target=native outputs to stderr
+            output = stderr_data.decode(errors='replace') if stderr_data else stdout_data.decode(errors='replace')
+
+            return SimulationResult(
+                success=True,
+                stdout=output,
+                stderr="" if stderr_data else stdout_data.decode(errors='replace'),
+                exit_code=proc.returncode,
+                timeout=timed_out,
+                memory=memory,
+            )
 
         except FileNotFoundError:
             return SimulationResult(

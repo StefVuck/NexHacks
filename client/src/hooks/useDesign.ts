@@ -289,10 +289,11 @@ export function useDesign(projectId?: string) {
         method: 'POST',
       });
 
-      // Map devices to BuildNodes
+      // Map devices to BuildNodes (include board_type for each node)
       const buildNodes: BuildNode[] = devices.map(d => ({
         node_id: d.nodeId,
         description: d.description || d.name,
+        board_type: d.boardType || settings.hardware.defaultBoard,
         assertions: d.assertions.map(a => ({
           name: a.description,
           pattern: a.condition,
@@ -301,12 +302,12 @@ export function useDesign(projectId?: string) {
       }));
 
       // Call the REAL API to start build with project ID as session ID
-      // Use the first device's board type as the main board type (or settings default)
-      const boardId = devices[0].boardType || settings.hardware.defaultBoard;
+      // Use first device's board type as default (backend will use per-node types)
+      const defaultBoardId = devices[0].boardType || settings.hardware.defaultBoard;
 
       const response = await buildApi.start({
         description: settings.general.description || 'Swarm Build',
-        board_id: boardId,
+        board_id: defaultBoardId,
         nodes: buildNodes,
         session_id: projectId, // Use project ID as session ID
       });

@@ -209,15 +209,20 @@ export const DeviceConfigPanel: React.FC<DeviceConfigPanelProps> = ({
                   </select>
                 </div>
 
-                {/* Description */}
+                {/* Description / Role - Critical for Claude */}
                 <div>
-                  <Label className="text-xs text-gray-500">Description</Label>
+                  <Label className="text-xs text-gray-500">
+                    Node Role <span className="text-blue-400">(Used by Claude)</span>
+                  </Label>
                   <Textarea
                     value={device.description}
                     onChange={(e) => handleUpdateField('description', e.target.value)}
-                    className="mt-1 bg-white/5 border-white/10 text-sm min-h-[60px]"
-                    placeholder="Describe this device's purpose..."
+                    className="mt-1 bg-white/5 border-white/10 text-sm min-h-[80px] border-blue-500/30"
+                    placeholder="e.g., 'Traffic counter sensor on Highway 101 that counts passing vehicles and reports count every 10 seconds'"
                   />
+                  <p className="text-xs text-gray-600 mt-1">
+                    Describe what this node does in your system. This is sent to Claude for code generation.
+                  </p>
                 </div>
               </div>
             )}

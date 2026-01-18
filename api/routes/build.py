@@ -83,6 +83,7 @@ async def start_build(request: BuildStartRequest):
                 node_id=node_data["node_id"],
                 description=node_data["description"],
                 assertions=assertions,
+                board_id=node_data.get("board_type"),  # Per-node board type
             )
         )
 
@@ -110,14 +111,40 @@ async def start_build(request: BuildStartRequest):
     async def run_build():
         session.build_state.status = BuildSessionStatus.RUNNING
         session.build_state.started_at = datetime.now()
-        board = spec.board
+        default_board = spec.board
 
         try:
             loop = GenerationLoop()
 
             for node in spec.nodes:
+                print(f"Processing node: {node.node_id}")
+
+                # Use per-node board type if specified, otherwise fall back to default
+                if node.board_id:
+                    try:
+                        board = get_board(node.board_id)
+                        print(f"  Using board: {board.name} ({node.board_id})")
+                    except ValueError as e:
+                        print(f"  Invalid board {node.board_id}, using default: {e}")
+                        board = default_board
+                else:
+                    board = default_board
+                    print(f"  Using default board: {board.name}")
+
                 node_state = session.get_node_state(node.node_id)
                 if not node_state:
+                    print(f"WARNING: No node state for {node.node_id}, skipping!")
+                    await session_manager.broadcast_to_session(
+                        session_id,
+                        {
+                            "stage": "build",
+                            "type": "error",
+                            "data": {
+                                "node_id": node.node_id,
+                                "message": f"Node state not found for {node.node_id}",
+                            },
+                        },
+                    )
                     continue
 
                 node_state.started_at = datetime.now()
@@ -175,10 +202,36 @@ Required output patterns (must appear in semihosting output):
                     )
 
                     # Generate code with system context
-                    code = loop.generate_firmware(
-                        node, board, previous_error,
-                        system_context=spec.description
-                    )
+                    try:
+                        code = loop.generate_firmware(
+                            node, board, previous_error,
+                            system_context=spec.description
+                        )
+                    except Exception as gen_error:
+                        print(f"Code generation failed for {node.node_id}: {gen_error}")
+                        import traceback
+                        traceback.print_exc()
+
+                        # Broadcast the error
+                        await session_manager.broadcast_to_session(
+                            session_id,
+                            {
+                                "stage": "build",
+                                "type": "error",
+                                "data": {
+                                    "node_id": node.node_id,
+                                    "iteration": iteration + 1,
+                                    "message": f"Code generation failed: {str(gen_error)}",
+                                },
+                            },
+                        )
+                        previous_error = f"Code generation error: {str(gen_error)}"
+                        continue
+
+                    if not code:
+                        print(f"No code generated for {node.node_id}")
+                        previous_error = "No code was generated"
+                        continue
 
                     # Broadcast LLM response (the generated code)
                     await session_manager.broadcast_to_session(
@@ -288,7 +341,15 @@ Required output patterns (must appear in semihosting output):
                         firmware_path=compilation.elf_path,
                         timeout_seconds=build_settings.simulation_timeout_seconds,
                     )
+                    print(f"  Running QEMU simulation for {node.node_id}...")
+                    print(f"    Firmware: {compilation.elf_path}")
+                    print(f"    Timeout: {build_settings.simulation_timeout_seconds}s")
                     simulation = await loop.qemu.run_single(sim_config, board)
+                    print(f"  Simulation complete:")
+                    print(f"    Success: {simulation.success}")
+                    print(f"    Timeout: {simulation.timeout}")
+                    print(f"    Output length: {len(simulation.stdout)} chars")
+                    print(f"    Output preview: {simulation.stdout[:200] if simulation.stdout else '(empty)'}")
 
                     # Stream simulation output
                     if simulation.stdout:

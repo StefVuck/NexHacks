@@ -184,6 +184,7 @@ class NodeSpec:
     node_id: str
     description: str
     assertions: list[TestAssertion] = field(default_factory=list)
+    board_id: str | None = None  # Per-node board type, falls back to SystemSpec.board_id
 
 
 @dataclass
@@ -292,6 +293,10 @@ Print the CSV header once, then print data rows as they are collected."""
         if previous_error:
             user_prompt += f"\n\nPREVIOUS ATTEMPT FAILED:\n{previous_error}\n\nFix all issues."
 
+        print(f"  Calling Claude for {node.node_id}...")
+        print(f"    System context: {system_context[:100] if system_context else '(none)'}...")
+        print(f"    Node description: {node.description[:100] if node.description else '(none)'}...")
+
         response = self.client.messages.create(
             model=MODEL,
             max_tokens=4096,
@@ -300,6 +305,7 @@ Print the CSV header once, then print data rows as they are collected."""
         )
 
         generated = response.content[0].text
+        print(f"  Claude response received: {len(generated)} chars")
 
         # Strip markdown fences if present
         if "```" in generated:

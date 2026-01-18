@@ -150,40 +150,57 @@ export default function BuildPage() {
             </div>
 
             <div className="flex items-center gap-4">
-              {/* Connection Status */}
-              <div className="flex items-center gap-2 text-sm">
-                {isConnected ? (
-                  <>
-                    <Wifi className="h-4 w-4 text-green-500" />
-                    <span className="text-green-500">Connected</span>
-                  </>
-                ) : (
-                  <>
-                    <WifiOff className="h-4 w-4 text-red-500" />
-                    <span className="text-red-500">Disconnected</span>
-                  </>
-                )}
-              </div>
+              {/* Only show connection/status when build has started */}
+              {totalCount > 0 && (
+                <>
+                  {/* Connection Status */}
+                  <div className="flex items-center gap-2 text-sm">
+                    {isConnected ? (
+                      <>
+                        <Wifi className="h-4 w-4 text-green-500" />
+                        <span className="text-green-500">Connected</span>
+                      </>
+                    ) : (
+                      <>
+                        <WifiOff className="h-4 w-4 text-red-500" />
+                        <span className="text-red-500">Disconnected</span>
+                      </>
+                    )}
+                  </div>
 
-              {/* Status */}
-              <div className="flex items-center gap-2">
-                {getStatusIcon()}
-                <span className="text-sm text-gray-300">{getStatusText()}</span>
-              </div>
+                  {/* Status */}
+                  <div className="flex items-center gap-2">
+                    {getStatusIcon()}
+                    <span className="text-sm text-gray-300">{getStatusText()}</span>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
       </header>
 
-      {/* Progress Bar */}
-      <BuildProgress
-        completedCount={completedCount}
-        totalCount={totalCount}
-        status={status}
-      />
+      {/* Progress Bar - only show when build has started */}
+      {totalCount > 0 && (
+        <BuildProgress
+          completedCount={completedCount}
+          totalCount={totalCount}
+          status={status}
+        />
+      )}
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-6">
+        {/* Loading State - Waiting for build to start */}
+        {totalCount === 0 && status === 'idle' ? (
+          <Card className="bg-[#1a1a1a] border-gray-800 h-[calc(100vh-220px)] flex items-center justify-center">
+            <div className="text-center">
+              <Loader2 className="h-12 w-12 text-blue-500 animate-spin mx-auto mb-4" />
+              <h2 className="text-xl font-medium text-white mb-2">Waiting for build to start</h2>
+              <p className="text-gray-400">Preparing firmware generation for your nodes...</p>
+            </div>
+          </Card>
+        ) : (
         <div className="grid grid-cols-12 gap-6">
           {/* Left Panel - Node List */}
           <div className="col-span-4">
@@ -222,6 +239,7 @@ export default function BuildPage() {
             </Card>
           </div>
         </div>
+        )}
 
         {/* Error Display */}
         {error && (
@@ -234,7 +252,8 @@ export default function BuildPage() {
           </Card>
         )}
 
-        {/* Action Buttons */}
+        {/* Action Buttons - only show when build has started */}
+        {totalCount > 0 && (
         <div className="flex justify-between mt-6">
           <Button
             variant="outline"
@@ -255,6 +274,7 @@ export default function BuildPage() {
             <ArrowRight className="h-4 w-4 ml-2" />
           </Button>
         </div>
+        )}
       </div>
     </div>
   );

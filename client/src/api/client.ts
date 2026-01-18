@@ -18,6 +18,7 @@ export const api = axios.create({
 export interface BuildNode {
   node_id: string;
   description: string;
+  board_type?: string;
   assertions: Array<{ name: string; pattern: string; required?: boolean }>;
 }
 

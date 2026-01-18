@@ -56,6 +56,15 @@ export const DesignPage: React.FC = () => {
   // Handle proceed to build
   const handleProceedToBuild = async () => {
     setBuildError(null);
+
+    // Validate that all devices have descriptions (roles)
+    const devicesWithoutRole = devices.filter(d => !d.description || d.description.trim() === '');
+    if (devicesWithoutRole.length > 0) {
+      const names = devicesWithoutRole.map(d => d.name || d.nodeId).join(', ');
+      setBuildError(`Please fill in the "Node Role" for: ${names}. Claude needs this to generate appropriate firmware.`);
+      return;
+    }
+
     try {
       const sessionId = await proceedToBuild();
       if (sessionId) {
@@ -86,7 +95,7 @@ export const DesignPage: React.FC = () => {
       boardType: deviceItem.boardType,
       nodeId: `${deviceItem.boardType}_${generateUUID()}`,
       name: deviceItem.name,
-      description: deviceItem.description,
+      description: '', // User must fill in the node's role/purpose for Claude
       position: position,
       features: deviceItem.defaultFeatures.map((f: any) => ({ ...f, id: generateUUID() })),
       assertions: [],
