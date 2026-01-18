@@ -40,3 +40,6 @@ Thumbs.db
 terraform.tfvars
 *.auto.tfvars
 crash.log
+
+# Generated CSV data
+output/

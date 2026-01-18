@@ -1,8 +1,18 @@
 #!/usr/bin/env python3
 """Pittsburgh Traffic Monitoring System - CSV Data Generator
 
-Simulates 50 road sensors across Pittsburgh generating real-time traffic data
-with CSV export. Includes a live ticker showing data generation progress.
+Generates firmware for 50 road sensors across Pittsburgh that export traffic data
+as CSV when running in QEMU simulator. The firmware includes Woodwide AI CSV 
+integration that automatically logs telemetry data.
+
+How it works:
+1. Claude AI generates embedded C firmware for each sensor
+2. Firmware is compiled to ARM binary
+3. Binary runs in QEMU ARM emulator (simulated hardware)
+4. Running firmware outputs CSV data via serial/semihosting
+5. CSV data is captured and saved to files
+
+The CSV generation happens IN the simulated microcontroller, not in Python.
 """
 
 import asyncio
@@ -13,6 +23,10 @@ from pathlib import Path
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
+
+# Load environment variables from .env file
+from dotenv import load_dotenv
+load_dotenv(Path(__file__).parent.parent / ".env")
 
 from agent import SystemSpec, NodeSpec, TestAssertion
 
