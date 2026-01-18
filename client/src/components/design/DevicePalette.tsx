@@ -6,46 +6,30 @@ import { ScrollArea } from '../ui/scroll-area';
 import { Input } from '../ui/input';
 import { Search } from 'lucide-react';
 
-// Available device types
+// Available device types - boardType must match backend board IDs in agent/boards.py
 const deviceCatalog: DevicePaletteItemType[] = [
+  // Recommended for simulation (has ARM toolchain + QEMU support)
   {
-    boardType: 'esp32',
-    name: 'ESP32',
-    description: 'WiFi + BLE microcontroller',
-    icon: 'wifi',
+    boardType: 'lm3s6965',
+    name: 'LM3S6965 (Recommended)',
+    description: 'Best QEMU support for simulation',
+    icon: 'microchip',
     defaultFeatures: [
-      { name: 'wifi', enabled: true },
-      { name: 'bluetooth', enabled: false },
-      { name: 'temperature', enabled: false },
+      { name: 'uart', enabled: true },
       { name: 'gpio', enabled: true },
+      { name: 'timer', enabled: true },
     ],
     specs: {
-      cpu: 'Dual-core 240MHz',
-      memory: '520KB SRAM',
-      connectivity: ['WiFi', 'BLE'],
-      pins: 38,
+      cpu: 'Cortex-M3 50MHz',
+      memory: '64KB SRAM',
+      connectivity: ['UART', 'I2C', 'SPI'],
+      pins: 64,
     },
   },
+  // STM32 Family (ARM - QEMU supported)
   {
-    boardType: 'esp32_s3',
-    name: 'ESP32-S3',
-    description: 'AI-capable WiFi + BLE MCU',
-    icon: 'wifi',
-    defaultFeatures: [
-      { name: 'wifi', enabled: true },
-      { name: 'bluetooth', enabled: true },
-      { name: 'ai_acceleration', enabled: true },
-    ],
-    specs: {
-      cpu: 'Dual-core 240MHz',
-      memory: '512KB SRAM',
-      connectivity: ['WiFi', 'BLE 5.0'],
-      pins: 45,
-    },
-  },
-  {
-    boardType: 'stm32f103',
-    name: 'STM32F103',
+    boardType: 'stm32f103c8',
+    name: 'STM32F103 Blue Pill',
     description: 'ARM Cortex-M3 MCU',
     icon: 'microchip',
     defaultFeatures: [
@@ -62,8 +46,8 @@ const deviceCatalog: DevicePaletteItemType[] = [
     },
   },
   {
-    boardType: 'stm32f4',
-    name: 'STM32F4',
+    boardType: 'stm32f407vg',
+    name: 'STM32F407 Discovery',
     description: 'High-performance ARM MCU',
     icon: 'microchip',
     defaultFeatures: [
@@ -79,10 +63,64 @@ const deviceCatalog: DevicePaletteItemType[] = [
       pins: 100,
     },
   },
+  // ESP32 Family (requires Xtensa toolchain - no QEMU)
+  {
+    boardType: 'esp32',
+    name: 'ESP32',
+    description: 'WiFi + BLE (requires Xtensa toolchain)',
+    icon: 'wifi',
+    defaultFeatures: [
+      { name: 'wifi', enabled: true },
+      { name: 'bluetooth', enabled: false },
+      { name: 'temperature', enabled: false },
+      { name: 'gpio', enabled: true },
+    ],
+    specs: {
+      cpu: 'Dual-core 240MHz',
+      memory: '520KB SRAM',
+      connectivity: ['WiFi', 'BLE'],
+      pins: 38,
+    },
+  },
+  {
+    boardType: 'esp32s3',
+    name: 'ESP32-S3',
+    description: 'AI-capable WiFi + BLE (requires Xtensa toolchain)',
+    icon: 'wifi',
+    defaultFeatures: [
+      { name: 'wifi', enabled: true },
+      { name: 'bluetooth', enabled: true },
+      { name: 'ai_acceleration', enabled: true },
+    ],
+    specs: {
+      cpu: 'Dual-core 240MHz',
+      memory: '512KB SRAM',
+      connectivity: ['WiFi', 'BLE 5.0'],
+      pins: 45,
+    },
+  },
+  // Arduino Family
+  {
+    boardType: 'arduino_due',
+    name: 'Arduino Due',
+    description: '32-bit ARM Arduino (QEMU supported)',
+    icon: 'circuit-board',
+    defaultFeatures: [
+      { name: 'serial', enabled: true },
+      { name: 'analog_input', enabled: true },
+      { name: 'pwm', enabled: true },
+    ],
+    specs: {
+      cpu: 'Cortex-M3 84MHz',
+      memory: '96KB SRAM',
+      connectivity: ['Serial', 'USB'],
+      pins: 54,
+    },
+  },
   {
     boardType: 'arduino_uno',
     name: 'Arduino Uno',
-    description: 'Classic ATmega328P board',
+    description: 'Classic ATmega328P (requires AVR toolchain)',
     icon: 'circuit-board',
     defaultFeatures: [
       { name: 'serial', enabled: true },
@@ -96,40 +134,7 @@ const deviceCatalog: DevicePaletteItemType[] = [
       pins: 14,
     },
   },
-  {
-    boardType: 'arduino_nano',
-    name: 'Arduino Nano',
-    description: 'Compact ATmega328P board',
-    icon: 'circuit-board',
-    defaultFeatures: [
-      { name: 'serial', enabled: true },
-      { name: 'analog_input', enabled: true },
-    ],
-    specs: {
-      cpu: 'ATmega328P 16MHz',
-      memory: '2KB SRAM',
-      connectivity: ['Serial'],
-      pins: 14,
-    },
-  },
-  {
-    boardType: 'raspberry_pi_pico',
-    name: 'Raspberry Pi Pico',
-    description: 'RP2040 dual-core MCU',
-    icon: 'cpu',
-    defaultFeatures: [
-      { name: 'pio', enabled: true },
-      { name: 'adc', enabled: true },
-      { name: 'i2c', enabled: true },
-      { name: 'spi', enabled: true },
-    ],
-    specs: {
-      cpu: 'Dual-core 133MHz',
-      memory: '264KB SRAM',
-      connectivity: ['UART', 'SPI', 'I2C'],
-      pins: 26,
-    },
-  },
+  // Infrastructure
   {
     boardType: 'server',
     name: 'Aggregation Server',
@@ -152,20 +157,16 @@ const deviceCatalog: DevicePaletteItemType[] = [
 // Category groupings
 const categories: { name: string; boards: BoardType[] }[] = [
   {
-    name: 'WiFi / BLE',
-    boards: ['esp32', 'esp32_s3'],
+    name: 'Recommended (QEMU)',
+    boards: ['lm3s6965', 'stm32f103c8', 'stm32f407vg', 'arduino_due'],
   },
   {
-    name: 'ARM Cortex',
-    boards: ['stm32f103', 'stm32f4'],
+    name: 'ESP32 (Xtensa)',
+    boards: ['esp32', 'esp32s3'],
   },
   {
-    name: 'Arduino',
-    boards: ['arduino_uno', 'arduino_nano'],
-  },
-  {
-    name: 'Other',
-    boards: ['raspberry_pi_pico'],
+    name: 'Arduino (AVR)',
+    boards: ['arduino_uno'],
   },
   {
     name: 'Infrastructure',

@@ -43,10 +43,21 @@ class SessionState:
         )
         self.simulate_task: Optional[asyncio.Task] = None
 
-        # Deploy
+        # Deploy - flash
         self.flash_status: dict = {}
-        self.cloud_status: Optional[dict] = None
+        self.flash_assignments: dict[str, str] = {}  # port -> node_id
+
+        # Deploy - cloud
+        self.cloud_status: str = "idle"
+        self.cloud_step: Optional[str] = None
+        self.cloud_progress: int = 0
+        self.cloud_message: Optional[str] = None
         self.terraform_outputs: Optional[dict] = None
+        self.terraform_task: Optional[asyncio.Task] = None
+
+        # Deploy - settings and telemetry
+        self.deploy_settings: Optional[dict] = None
+        self.node_telemetry: dict[str, dict] = {}
 
         # WebSocket connections
         self.websockets: list = []

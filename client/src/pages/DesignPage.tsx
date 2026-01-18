@@ -10,7 +10,7 @@ import { SelectionToolbar } from '../components/design/SelectionToolbar';
 import { SettingsModal } from '../components/settings/SettingsModal';
 import { DevicePickerModal } from '../components/design/DevicePickerModal';
 import { Button } from '../components/ui/button';
-import { ArrowRight, Loader2, Plus } from 'lucide-react';
+import { ArrowRight, Loader2, Plus, AlertCircle, X } from 'lucide-react';
 
 const generateUUID = () => Math.random().toString(36).substr(2, 9);
 
@@ -47,10 +47,12 @@ export const DesignPage: React.FC = () => {
 
   // Modal state
   const [devicePickerOpen, setDevicePickerOpen] = React.useState(false);
+  const [buildError, setBuildError] = React.useState<string | null>(null);
   const addDevice = useDesignStore((state) => state.addDevice);
 
   // Handle proceed to build
   const handleProceedToBuild = async () => {
+    setBuildError(null);
     try {
       const sessionId = await proceedToBuild();
       if (sessionId) {
@@ -58,9 +60,13 @@ export const DesignPage: React.FC = () => {
         navigate(`/build/${sessionId}`);
         console.log('Ready to navigate to build stage:', sessionId);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error("Failed to start build:", e);
-      // Optional: show toast error
+      // Extract error message from API response
+      const errorMessage = e?.response?.data?.detail
+        || e?.message
+        || "Failed to start build. Please try again.";
+      setBuildError(errorMessage);
     }
   };
 
@@ -118,19 +124,6 @@ export const DesignPage: React.FC = () => {
 
       {/* Main content */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left sidebar: REMOVED, replaced by floating button */}
-
-        {/* Floating Add Device Button */}
-        <div className="absolute top-4 left-4 z-20">
-          <Button
-            onClick={() => setDevicePickerOpen(true)}
-            className="bg-blue-600 hover:bg-blue-500 shadow-lg"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add Device
-          </Button>
-        </div>
-
         <DevicePickerModal
           open={devicePickerOpen}
           onOpenChange={setDevicePickerOpen}
@@ -187,6 +180,17 @@ export const DesignPage: React.FC = () => {
 
         {/* Right sidebar: Device config */}
         <aside className="w-80 bg-[#121212] border-l border-white/10 flex flex-col">
+          {/* Add Device Button */}
+          <div className="p-4 border-b border-white/10">
+            <Button
+              onClick={() => setDevicePickerOpen(true)}
+              className="w-full bg-blue-600 hover:bg-blue-500 shadow-lg"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add Device
+            </Button>
+          </div>
+
           {selectedDevice ? (
             <DeviceConfigPanel device={selectedDevice} />
           ) : (
@@ -216,6 +220,20 @@ export const DesignPage: React.FC = () => {
 
           {/* Proceed button */}
           <div className="p-4 border-t border-white/10">
+            {buildError && (
+              <div className="mb-3 p-3 bg-red-900/30 border border-red-700 rounded-md">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-red-300 flex-1">{buildError}</p>
+                  <button
+                    onClick={() => setBuildError(null)}
+                    className="text-red-400 hover:text-red-300"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
+            )}
             <Button
               onClick={handleProceedToBuild}
               disabled={!hasDevices || isLoading}

@@ -2,7 +2,7 @@
  * Simulation session state management hook
  */
 
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect, useRef } from 'react';
 import {
   simulateApi,
   SimulateStatusResponse,
@@ -178,6 +178,15 @@ export function useSimulation() {
         break;
       }
 
+      case 'tick': {
+        const { elapsed_ms } = data as { elapsed_ms: number };
+        setState((prev) => ({
+          ...prev,
+          elapsedTimeMs: elapsed_ms,
+        }));
+        break;
+      }
+
       case 'complete': {
         const { elapsed_ms, tests_passed, tests_failed } = data as {
           elapsed_ms: number;
@@ -208,6 +217,34 @@ export function useSimulation() {
   const { isConnected } = useWebSocket(state.sessionId, {
     onMessage: handleMessage,
   });
+
+  // Local timer to update elapsed time while running
+  const startTimeRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (state.status === 'running') {
+      // Capture start time when simulation starts running
+      if (startTimeRef.current === null) {
+        startTimeRef.current = Date.now() - state.elapsedTimeMs;
+      }
+
+      const interval = setInterval(() => {
+        const elapsed = Date.now() - (startTimeRef.current || Date.now());
+        setState((prev) => ({
+          ...prev,
+          elapsedTimeMs: elapsed,
+        }));
+      }, 100); // Update every 100ms
+
+      return () => clearInterval(interval);
+    } else if (state.status === 'paused') {
+      // Keep the current elapsed time but stop the timer
+      startTimeRef.current = null;
+    } else if (state.status === 'idle' || state.status === 'stopped') {
+      // Reset timer reference
+      startTimeRef.current = null;
+    }
+  }, [state.status]);
 
   // Start simulation
   const startSimulation = useCallback(

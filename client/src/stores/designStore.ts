@@ -31,7 +31,7 @@ const defaultSettings: ProjectSettings = {
     useTls: false,
   },
   hardware: {
-    defaultBoard: 'esp32',
+    defaultBoard: 'lm3s6965',  // Best QEMU support
     serialBaud: 115200,
     autoDetectPorts: true,
     flashVerify: true,
@@ -54,10 +54,10 @@ const defaultSettings: ProjectSettings = {
 // Default canvas view state
 const defaultCanvasView: CanvasViewState = {
   zoom: 1,
-  center: { x: 0, y: 0 },
-  gridSnap: true,
+  center: { x: -79.9428, y: 40.4432 },  // Default to CMU coordinates
+  gridSnap: false,  // Disabled - grid snap doesn't work with lat/lng
   gridSize: 20,
-  showGrid: true,
+  showGrid: false,
 };
 
 // Default selection state
@@ -254,17 +254,11 @@ export const useDesignStore = create<DesignStore>()(
       },
 
       moveDevice: (id, position) => {
-        const { gridSnap, gridSize } = get().canvasView;
-        const snappedPosition = gridSnap
-          ? {
-              x: Math.round(position.x / gridSize) * gridSize,
-              y: Math.round(position.y / gridSize) * gridSize,
-            }
-          : position;
-
+        // Don't apply grid snapping - we're using lat/lng coordinates on a map
+        // Grid snapping only makes sense for pixel-based canvases
         set((state) => ({
           devices: state.devices.map((d) =>
-            d.id === id ? { ...d, position: snappedPosition, updatedAt: Date.now() } : d
+            d.id === id ? { ...d, position, updatedAt: Date.now() } : d
           ),
           isDirty: true,
         }));

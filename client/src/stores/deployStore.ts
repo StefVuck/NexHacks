@@ -156,10 +156,10 @@ export const useDeployStore = create<DeployState>()(
 
       setDevices: (devices) =>
         set((state) => ({
-          devices,
+          devices: devices || [],
           lastScanTime: Date.now(),
           // Update assignments from devices
-          assignments: devices.reduce((acc, d) => {
+          assignments: (devices || []).reduce((acc, d) => {
             if (d.assigned_node) {
               acc[d.port] = d.assigned_node;
             }
@@ -195,7 +195,7 @@ export const useDeployStore = create<DeployState>()(
         })),
 
       setCloudStatus: (status) =>
-        set({ cloudStatus: status }),
+        set({ cloudStatus: status || defaultCloudStatus }),
 
       setCloudPrerequisites: (prereqs) =>
         set({ cloudPrerequisites: prereqs }),

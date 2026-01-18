@@ -1,13 +1,19 @@
 // Device board types supported by Swarm Architect
+// These must match backend board IDs in agent/boards.py
 export type BoardType =
+  | 'lm3s6965'      // Best QEMU support, recommended for simulation
   | 'esp32'
-  | 'esp32_s3'
-  | 'stm32f103'
-  | 'stm32f4'
+  | 'esp32s3'       // Note: no underscore
+  | 'esp32c3'
+  | 'stm32f103c8'   // Blue Pill
+  | 'stm32f401re'   // Nucleo
+  | 'stm32f407vg'   // Discovery
+  | 'stm32l476rg'
   | 'arduino_uno'
   | 'arduino_nano'
-  | 'raspberry_pi_pico'
-  | 'server';
+  | 'arduino_mega'
+  | 'arduino_due'
+  | 'server';       // Not a real board, used for aggregation server
 
 // Communication protocols
 export type Protocol = 'mqtt' | 'http';

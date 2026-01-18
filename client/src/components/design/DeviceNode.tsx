@@ -12,27 +12,37 @@ import {
   Copy,
 } from 'lucide-react';
 
-// Board type to icon mapping
+// Board type to icon mapping (must match BoardType in types/design.ts)
 const boardIcons: Record<BoardType, React.ElementType> = {
+  lm3s6965: Microchip,
   esp32: Wifi,
-  esp32_s3: Wifi,
-  stm32f103: Microchip,
-  stm32f4: Microchip,
+  esp32s3: Wifi,
+  esp32c3: Wifi,
+  stm32f103c8: Microchip,
+  stm32f401re: Microchip,
+  stm32f407vg: Microchip,
+  stm32l476rg: Microchip,
   arduino_uno: CircuitBoard,
   arduino_nano: CircuitBoard,
-  raspberry_pi_pico: Cpu,
+  arduino_mega: CircuitBoard,
+  arduino_due: CircuitBoard,
   server: Server,
 };
 
 // Board type to color mapping
 const boardColors: Record<BoardType, { bg: string; border: string; text: string }> = {
+  lm3s6965: { bg: 'bg-emerald-500/20', border: 'border-emerald-500/50', text: 'text-emerald-400' },
   esp32: { bg: 'bg-blue-500/20', border: 'border-blue-500/50', text: 'text-blue-400' },
-  esp32_s3: { bg: 'bg-blue-500/20', border: 'border-blue-500/50', text: 'text-blue-400' },
-  stm32f103: { bg: 'bg-emerald-500/20', border: 'border-emerald-500/50', text: 'text-emerald-400' },
-  stm32f4: { bg: 'bg-emerald-500/20', border: 'border-emerald-500/50', text: 'text-emerald-400' },
+  esp32s3: { bg: 'bg-blue-500/20', border: 'border-blue-500/50', text: 'text-blue-400' },
+  esp32c3: { bg: 'bg-blue-500/20', border: 'border-blue-500/50', text: 'text-blue-400' },
+  stm32f103c8: { bg: 'bg-emerald-500/20', border: 'border-emerald-500/50', text: 'text-emerald-400' },
+  stm32f401re: { bg: 'bg-emerald-500/20', border: 'border-emerald-500/50', text: 'text-emerald-400' },
+  stm32f407vg: { bg: 'bg-emerald-500/20', border: 'border-emerald-500/50', text: 'text-emerald-400' },
+  stm32l476rg: { bg: 'bg-emerald-500/20', border: 'border-emerald-500/50', text: 'text-emerald-400' },
   arduino_uno: { bg: 'bg-cyan-500/20', border: 'border-cyan-500/50', text: 'text-cyan-400' },
   arduino_nano: { bg: 'bg-cyan-500/20', border: 'border-cyan-500/50', text: 'text-cyan-400' },
-  raspberry_pi_pico: { bg: 'bg-purple-500/20', border: 'border-purple-500/50', text: 'text-purple-400' },
+  arduino_mega: { bg: 'bg-cyan-500/20', border: 'border-cyan-500/50', text: 'text-cyan-400' },
+  arduino_due: { bg: 'bg-cyan-500/20', border: 'border-cyan-500/50', text: 'text-cyan-400' },
   server: { bg: 'bg-amber-500/20', border: 'border-amber-500/50', text: 'text-amber-400' },
 };
 

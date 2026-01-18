@@ -6,6 +6,7 @@ from datetime import datetime
 from fastapi import APIRouter, HTTPException
 
 from agent import GenerationLoop, NodeSpec, SystemSpec, TestAssertion
+from agent.boards import get_board, check_toolchain_available
 from api.models import (
     BuildSessionStatus,
     BuildSettings,
@@ -26,6 +27,17 @@ router = APIRouter()
 @router.post("/start")
 async def start_build(request: BuildStartRequest):
     """Start the firmware generation loop with detailed progress tracking."""
+    # Check toolchain availability before starting
+    board_id = request.board_id or (request.settings.board_id if request.settings else "lm3s6965")
+    try:
+        board = get_board(board_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    toolchain_ok, toolchain_error = check_toolchain_available(board)
+    if not toolchain_ok:
+        raise HTTPException(status_code=400, detail=toolchain_error)
+
     # Create new session
     session_id = session_manager.create_session()
     session = session_manager.get_session(session_id)
@@ -128,7 +140,7 @@ async def start_build(request: BuildStartRequest):
                             "data": {
                                 "node_id": node.node_id,
                                 "iteration": iteration + 1,
-                                "code_preview": code[:500] if code else "",
+                                "code_preview": code[:2000] if code else "",
                             },
                         },
                     )
@@ -155,9 +167,9 @@ async def start_build(request: BuildStartRequest):
                     memory_usage = None
                     if compilation.memory:
                         memory_usage = MemoryUsage(
-                            flash_used=compilation.memory.flash_used,
+                            flash_used=compilation.memory.flash_usage,
                             flash_limit=board.flash_bytes,
-                            ram_used=compilation.memory.ram_used,
+                            ram_used=compilation.memory.ram_usage,
                             ram_limit=board.ram_bytes,
                         )
 

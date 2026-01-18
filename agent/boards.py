@@ -275,3 +275,36 @@ def list_boards_table() -> str:
             f"| {b.id} | {b.name} | {b.arch.value} | {b.flash_kb}KB | {b.ram_kb}KB | {qemu} |"
         )
     return "\n".join(lines)
+
+
+def check_toolchain_available(board: BoardConfig) -> tuple[bool, str | None]:
+    """Check if the compiler toolchain for a board is available.
+
+    Returns (available, error_message).
+    """
+    import shutil
+
+    compiler = board.compiler
+    if shutil.which(compiler) is None:
+        # Find alternative boards with available toolchains
+        available_boards = []
+        for b in QEMU_SUPPORTED_BOARDS:
+            if shutil.which(b.compiler):
+                available_boards.append(b.id)
+
+        suggestion = ""
+        if available_boards:
+            suggestion = f" Try one of these boards instead: {', '.join(available_boards[:3])}"
+
+        return False, (
+            f"Compiler '{compiler}' not found for board '{board.name}'. "
+            f"Please install the toolchain or select a different board.{suggestion}"
+        )
+
+    return True, None
+
+
+def get_available_boards() -> list[BoardConfig]:
+    """Return boards that have their toolchain installed."""
+    import shutil
+    return [b for b in BOARDS.values() if shutil.which(b.compiler)]

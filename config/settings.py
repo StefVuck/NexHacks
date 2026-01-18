@@ -39,6 +39,9 @@ class Settings:
     # Default board
     default_board_id: str = "lm3s6965"
 
+    # Demo/simulation mode
+    simulate_hardware: bool = False  # Simulate USB devices for demo
+
     def __post_init__(self):
         """Load values from environment variables."""
         self.max_build_iterations = int(
@@ -55,6 +58,7 @@ class Settings:
         self.claude_model = os.getenv("CLAUDE_MODEL", self.claude_model)
         self.wokwi_cli_token = os.getenv("WOKWI_CLI_TOKEN", self.wokwi_cli_token)
         self.default_board_id = os.getenv("DEFAULT_BOARD_ID", self.default_board_id)
+        self.simulate_hardware = os.getenv("SIMULATE_HARDWARE", "").lower() in ("true", "1", "yes")
 
         # Parse CORS origins from env if provided
         cors_env = os.getenv("CORS_ORIGINS")

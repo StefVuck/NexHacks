@@ -1,6 +1,7 @@
 """Simulate stage API routes with real-time visualization support."""
 
 import asyncio
+import random
 from datetime import datetime
 from typing import Optional
 
@@ -109,55 +110,80 @@ async def start_simulation(request: SimulateStartRequest):
                 elapsed += tick_interval
 
                 session.simulation_state.elapsed_time_ms = int(elapsed * 1000)
+                tick_count = int(elapsed * 10)  # Increments every 100ms
 
-                # Simulate periodic node outputs based on build results
-                if int(elapsed * 10) % 10 == 0:  # Every second (simulated)
+                # Send tick update every 500ms (every 5 ticks)
+                if tick_count % 5 == 0:
+                    await session_manager.broadcast_to_session(
+                        request.session_id,
+                        {
+                            "stage": "simulate",
+                            "type": "tick",
+                            "data": {
+                                "elapsed_ms": session.simulation_state.elapsed_time_ms,
+                            },
+                        },
+                    )
+
+                # Send simulated messages every second (every 10 ticks)
+                if tick_count % 10 == 0 and tick_count > 0:
                     for node_id in successful_nodes:
                         node_build = build_state.nodes.get(node_id)
+
+                        # Get readings from build output or generate mock data
+                        readings = {}
                         if node_build and node_build.iterations:
                             latest = node_build.iterations[-1]
                             if latest.simulation_output:
-                                # Parse output for readings
                                 readings = _parse_readings(latest.simulation_output)
-                                session.update_sim_node_status(node_id, "online", readings)
 
-                                # Create simulated message
-                                msg = SimulationMessage(
-                                    timestamp=datetime.now(),
-                                    from_node=node_id,
-                                    to_node="broker",
-                                    payload=readings,
-                                    topic=f"swarm/demo/nodes/{node_id}/telemetry",
-                                )
-                                session.simulation_state.messages.append(msg)
+                        # If no readings from build, generate mock sensor data
+                        if not readings:
+                            readings = {
+                                "temperature": round(20 + random.random() * 10, 1),
+                                "counter": tick_count // 10,
+                            }
 
-                                await session_manager.broadcast_to_session(
-                                    request.session_id,
-                                    {
-                                        "stage": "simulate",
-                                        "type": "message",
-                                        "data": {
-                                            "from": node_id,
-                                            "to": "broker",
-                                            "topic": msg.topic,
-                                            "payload": readings,
-                                            "timestamp": int(datetime.now().timestamp() * 1000),
-                                        },
-                                    },
-                                )
+                        # Update node status
+                        session.update_sim_node_status(node_id, "online", readings)
 
-                                await session_manager.broadcast_to_session(
-                                    request.session_id,
-                                    {
-                                        "stage": "simulate",
-                                        "type": "node_status",
-                                        "data": {
-                                            "node_id": node_id,
-                                            "status": "online",
-                                            "readings": readings,
-                                        },
-                                    },
-                                )
+                        # Create simulated message
+                        msg = SimulationMessage(
+                            timestamp=datetime.now(),
+                            from_node=node_id,
+                            to_node="broker",
+                            payload=readings,
+                            topic=f"swarm/demo/nodes/{node_id}/telemetry",
+                        )
+                        session.simulation_state.messages.append(msg)
+
+                        await session_manager.broadcast_to_session(
+                            request.session_id,
+                            {
+                                "stage": "simulate",
+                                "type": "message",
+                                "data": {
+                                    "from": node_id,
+                                    "to": "broker",
+                                    "topic": msg.topic,
+                                    "payload": readings,
+                                    "timestamp": int(datetime.now().timestamp() * 1000),
+                                },
+                            },
+                        )
+
+                        await session_manager.broadcast_to_session(
+                            request.session_id,
+                            {
+                                "stage": "simulate",
+                                "type": "node_status",
+                                "data": {
+                                    "node_id": node_id,
+                                    "status": "online",
+                                    "readings": readings,
+                                },
+                            },
+                        )
 
             # Simulation complete
             session.simulation_state.status = SimulationStatus.COMPLETED

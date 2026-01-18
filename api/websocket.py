@@ -22,9 +22,10 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
     # Get or create session
     session = session_manager.get_session(session_id)
     if not session:
-        # Create session if it doesn't exist
-        session_manager.sessions[session_id] = session_manager.create_session()
-        session = session_manager.get_session(session_id)
+        # Create session with the provided session_id
+        from api.sessions import SessionState
+        session_manager.sessions[session_id] = SessionState(session_id=session_id)
+        session = session_manager.sessions[session_id]
     
     # Add WebSocket to session
     session.websockets.append(websocket)

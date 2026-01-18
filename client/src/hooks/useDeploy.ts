@@ -174,11 +174,15 @@ export function useDeploy() {
         assignments: Record<string, string>;
       }>(`/api/deploy/${store.sessionId}/status`);
 
-      store.setDevices(status.devices);
-      store.setCloudStatus(status.cloud_status);
-      Object.entries(status.flash_status).forEach(([port, progress]) => {
-        store.updateFlashStatus(port, progress);
-      });
+      store.setDevices(status.devices || []);
+      if (status.cloud_status) {
+        store.setCloudStatus(status.cloud_status);
+      }
+      if (status.flash_status) {
+        Object.entries(status.flash_status).forEach(([port, progress]) => {
+          store.updateFlashStatus(port, progress);
+        });
+      }
 
       return status;
     } catch (error) {
@@ -201,7 +205,7 @@ export function useDeploy() {
     }
   }, [store.sessionId, store.settings, fetchApi]);
 
-  // Simulate telemetry (for testing)
+  // Simulate telemetry (single shot, for testing)
   const simulateTelemetry = useCallback(async () => {
     if (!store.sessionId) return;
     try {
@@ -211,6 +215,31 @@ export function useDeploy() {
     } catch (error) {
       console.error('Failed to simulate telemetry:', error);
       throw error;
+    }
+  }, [store.sessionId, fetchApi]);
+
+  // Start continuous telemetry simulation
+  const startTelemetrySimulation = useCallback(async (intervalSeconds: number = 2) => {
+    if (!store.sessionId) return;
+    try {
+      await fetchApi(`/api/deploy/${store.sessionId}/telemetry/start?interval_seconds=${intervalSeconds}`, {
+        method: 'POST',
+      });
+    } catch (error) {
+      console.error('Failed to start telemetry simulation:', error);
+      throw error;
+    }
+  }, [store.sessionId, fetchApi]);
+
+  // Stop continuous telemetry simulation
+  const stopTelemetrySimulation = useCallback(async () => {
+    if (!store.sessionId) return;
+    try {
+      await fetchApi(`/api/deploy/${store.sessionId}/telemetry/stop`, {
+        method: 'POST',
+      });
+    } catch (error) {
+      console.error('Failed to stop telemetry simulation:', error);
     }
   }, [store.sessionId, fetchApi]);
 
@@ -378,17 +407,33 @@ export function useDeploy() {
   }, [store.settings.auto_scan_enabled, store.settings.scan_interval_ms]);
 
   // Check if deploy button should be enabled
-  const canDeploy = store.settings.wifi_ssid.length > 0 &&
-    store.cloudPrerequisites?.ready === true &&
-    store.cloudStatus.status === 'idle';
+  const cloudStatusValue = store.cloudStatus?.status || 'idle';
+
+  // Auto-start telemetry simulation when deployed
+  const telemetryStartedRef = useRef(false);
+  useEffect(() => {
+    if (cloudStatusValue === 'deployed' && !telemetryStartedRef.current && store.sessionId) {
+      telemetryStartedRef.current = true;
+      // Start continuous telemetry simulation
+      fetchApi(`/api/deploy/${store.sessionId}/telemetry/start?interval_seconds=2`, {
+        method: 'POST',
+      }).catch(console.error);
+    } else if (cloudStatusValue !== 'deployed') {
+      telemetryStartedRef.current = false;
+    }
+  }, [cloudStatusValue, store.sessionId]);
+  // For demo mode, allow deployment without WiFi settings
+  // In production, WiFi is required for real hardware
+  const canDeploy = store.cloudPrerequisites?.ready === true &&
+    cloudStatusValue === 'idle';
 
   // Check if destroy button should be enabled
-  const canDestroy = store.cloudStatus.status === 'deployed' ||
-    store.cloudStatus.status === 'error';
+  const canDestroy = cloudStatusValue === 'deployed' ||
+    cloudStatusValue === 'error';
 
   // Check if we're in a deployable state
-  const isDeploying = ['initializing', 'planning', 'applying'].includes(store.cloudStatus.status);
-  const isDestroying = store.cloudStatus.status === 'destroying';
+  const isDeploying = ['initializing', 'planning', 'applying'].includes(cloudStatusValue);
+  const isDestroying = cloudStatusValue === 'destroying';
 
   return {
     // State from store
@@ -414,5 +459,7 @@ export function useDeploy() {
     simulateTelemetry,
     connectWebSocket,
     disconnectWebSocket,
+    startTelemetrySimulation,
+    stopTelemetrySimulation,
   };
 }

@@ -2,6 +2,7 @@
 
 import asyncio
 import os
+import random
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -9,6 +10,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Query
 
 from api.sessions import session_manager
+from config.settings import settings
 from api.models import (
     DeviceInfo,
     NodeAssignment,
@@ -43,15 +45,59 @@ TERRAFORM_WORKING_DIR.mkdir(parents=True, exist_ok=True)
 # Device Management
 # ============================================================================
 
+# Simulated devices for demo mode
+SIMULATED_DEVICES = [
+    DeviceInfo(
+        port="/dev/ttyUSB0",
+        board_type="esp32",
+        chip_name="ESP32-WROOM-32",
+        vid="10c4",
+        pid="ea60",
+        assigned_node=None,
+    ),
+    DeviceInfo(
+        port="/dev/ttyUSB1",
+        board_type="stm32f103c8",
+        chip_name="STM32F103C8 (Blue Pill)",
+        vid="0483",
+        pid="5740",
+        assigned_node=None,
+    ),
+    DeviceInfo(
+        port="/dev/ttyACM0",
+        board_type="lm3s6965",
+        chip_name="LM3S6965 Stellaris",
+        vid="1cbe",
+        pid="00fd",
+        assigned_node=None,
+    ),
+]
+
+
 @router.get("/devices", response_model=list[DeviceInfo])
 async def list_devices(session_id: Optional[str] = Query(None)):
     """
     List connected USB devices.
 
     If session_id is provided, includes node assignments for that session.
+    In demo mode (SIMULATE_HARDWARE=true), returns simulated devices.
     """
-    flash_manager = FlashManager(BUILDS_DIR / "firmware")
-    devices = flash_manager.scan_devices()
+    # Use simulated devices in demo mode
+    if settings.simulate_hardware:
+        devices = [DeviceInfo(**d.model_dump()) for d in SIMULATED_DEVICES]
+    else:
+        flash_manager = FlashManager(BUILDS_DIR / "firmware")
+        devices = [
+            DeviceInfo(
+                port=d.port,
+                board_type=d.board_type,
+                chip_name=d.chip_name,
+                vid=d.vid,
+                pid=d.pid,
+                assigned_node=d.assigned_node,
+            )
+            for d in flash_manager.scan_devices()
+        ]
 
     # Add session-specific assignments
     if session_id:
@@ -60,17 +106,7 @@ async def list_devices(session_id: Optional[str] = Query(None)):
             for device in devices:
                 device.assigned_node = session.flash_assignments.get(device.port)
 
-    return [
-        DeviceInfo(
-            port=d.port,
-            board_type=d.board_type,
-            chip_name=d.chip_name,
-            vid=d.vid,
-            pid=d.pid,
-            assigned_node=d.assigned_node,
-        )
-        for d in devices
-    ]
+    return devices
 
 
 @router.post("/devices/scan", response_model=list[DeviceInfo])
@@ -136,15 +172,59 @@ async def flash_firmware(session_id: str, request: FlashRequest):
     - flash_started
     - flash_progress
     - flash_complete / flash_error
+
+    In demo mode (SIMULATE_HARDWARE=true), simulates the flashing process.
     """
     session = session_manager.get_session(session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    if session.build_status != "success":
+    if session.build_state.status.value != "success":
         raise HTTPException(status_code=400, detail="Build must complete successfully first")
 
-    # Progress callback to broadcast via WebSocket
+    # Simulated flashing for demo mode
+    if settings.simulate_hardware:
+        async def simulate_flash():
+            stages = [
+                ("connecting", "Connecting to device...", 0),
+                ("erasing", "Erasing flash memory...", 20),
+                ("writing", "Writing firmware (0%)...", 30),
+                ("writing", "Writing firmware (25%)...", 45),
+                ("writing", "Writing firmware (50%)...", 60),
+                ("writing", "Writing firmware (75%)...", 75),
+                ("writing", "Writing firmware (100%)...", 90),
+                ("verifying", "Verifying firmware...", 95),
+                ("complete", "Flash complete!", 100),
+            ]
+
+            for stage, message, percent in stages:
+                status = "progress" if percent < 100 else "complete"
+                flash_data = {
+                    "port": request.port,
+                    "node_id": request.node_id,
+                    "status": status,
+                    "percent": percent,
+                    "stage": stage,
+                    "message": message,
+                    "error": None,
+                }
+                session.flash_status[request.port] = flash_data
+
+                await session_manager.broadcast_to_session(session_id, {
+                    "stage": "deploy",
+                    "type": f"flash_{status}",
+                    "data": flash_data,
+                })
+
+                await asyncio.sleep(0.5)  # Simulate delay
+
+        asyncio.create_task(simulate_flash())
+        return {
+            "status": "started",
+            "message": f"Flashing {request.node_id} to {request.port} (simulated)",
+        }
+
+    # Real flashing
     async def on_progress(progress: FlashProgressInternal):
         session.flash_status[request.port] = FlashProgress(
             port=progress.port,
@@ -167,7 +247,6 @@ async def flash_firmware(session_id: str, request: FlashRequest):
         progress_callback=on_progress,
     )
 
-    # Start flashing in background
     async def do_flash():
         await flash_manager.flash_device(
             port=request.port,
@@ -193,7 +272,7 @@ async def flash_all_firmware(session_id: str, request: Optional[FlashAllRequest]
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    if session.build_status != "success":
+    if session.build_state.status.value != "success":
         raise HTTPException(status_code=400, detail="Build must complete successfully first")
 
     # Get assignments
@@ -296,6 +375,7 @@ async def start_cloud_deployment(session_id: str, request: CloudDeployRequest):
     - terraform_progress (resource-level updates)
     - terraform_outputs (final outputs)
     - terraform_error (on failure)
+
     """
     session = session_manager.get_session(session_id)
     if not session:
@@ -622,39 +702,110 @@ async def get_telemetry(session_id: str) -> LiveStatusResponse:
 @router.post("/{session_id}/telemetry/simulate")
 async def simulate_telemetry(session_id: str):
     """
-    Simulate telemetry data for testing.
-
-    This generates fake sensor readings and broadcasts them via WebSocket.
+    Simulate a single telemetry update for testing.
     """
-    import random
-
     session = session_manager.get_session(session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    if not session.system_spec:
-        raise HTTPException(status_code=400, detail="No system spec available")
+    node_ids = _get_session_node_ids(session)
+    if not node_ids:
+        raise HTTPException(status_code=400, detail="No nodes found")
 
-    # Generate fake telemetry for each node
-    nodes = session.system_spec.get("nodes", [])
-    for node in nodes:
-        node_id = node.get("node_id", node.get("id", "unknown"))
+    await _generate_telemetry_update(session_id, session, node_ids)
+    return {"status": "simulated", "nodes": len(node_ids)}
 
-        # Random readings
+
+@router.post("/{session_id}/telemetry/start")
+async def start_telemetry_simulation(session_id: str, interval_seconds: float = 2.0):
+    """
+    Start continuous telemetry simulation in the background.
+
+    This simulates live sensor readings from deployed nodes.
+    """
+    session = session_manager.get_session(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    # Stop existing simulation if running
+    if hasattr(session, 'telemetry_task') and session.telemetry_task:
+        session.telemetry_task.cancel()
+
+    node_ids = _get_session_node_ids(session)
+    if not node_ids:
+        raise HTTPException(status_code=400, detail="No nodes found")
+
+    async def run_telemetry_loop():
+        try:
+            while True:
+                await _generate_telemetry_update(session_id, session, node_ids)
+                await asyncio.sleep(interval_seconds)
+        except asyncio.CancelledError:
+            pass
+
+    session.telemetry_task = asyncio.create_task(run_telemetry_loop())
+
+    return {"status": "started", "interval": interval_seconds, "nodes": len(node_ids)}
+
+
+@router.post("/{session_id}/telemetry/stop")
+async def stop_telemetry_simulation(session_id: str):
+    """Stop continuous telemetry simulation."""
+    session = session_manager.get_session(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    if hasattr(session, 'telemetry_task') and session.telemetry_task:
+        session.telemetry_task.cancel()
+        session.telemetry_task = None
+
+    return {"status": "stopped"}
+
+
+def _get_session_node_ids(session) -> list[str]:
+    """Get node IDs from session (build state or system spec)."""
+    # Try build state first
+    if session.build_state and session.build_state.nodes:
+        return list(session.build_state.nodes.keys())
+
+    # Fall back to system spec
+    if session.system_spec:
+        nodes = session.system_spec.get("nodes", [])
+        return [n.get("node_id", n.get("id", f"node_{i}")) for i, n in enumerate(nodes)]
+
+    return []
+
+
+async def _generate_telemetry_update(session_id: str, session, node_ids: list[str]):
+    """Generate and broadcast telemetry for all nodes."""
+    import random
+
+    for node_id in node_ids:
+        # Simulate sensor readings with some variance
+        base_temp = 22 + hash(node_id) % 10  # Consistent base per node
+        base_humidity = 45 + hash(node_id) % 20
+
         readings = {
-            "temperature": round(20 + random.random() * 15, 1),
-            "humidity": round(40 + random.random() * 40, 1),
+            "temperature": round(base_temp + random.uniform(-2, 5), 1),
+            "humidity": round(base_humidity + random.uniform(-5, 10), 1),
+            "battery": round(85 + random.uniform(-10, 15), 0),
+            "rssi": round(-50 + random.uniform(-20, 10), 0),
         }
 
         # Check for alerts
         alerts = []
         if readings["temperature"] > 30:
             alerts.append(f"High temperature: {readings['temperature']}°C")
+        if readings["battery"] < 20:
+            alerts.append(f"Low battery: {readings['battery']}%")
+
+        # Occasional offline status (5% chance)
+        online = random.random() > 0.05
 
         telemetry = {
-            "online": random.random() > 0.1,  # 90% chance online
-            "last_seen": datetime.now().isoformat(),
-            "readings": readings,
+            "online": online,
+            "last_seen": datetime.now().isoformat() if online else session.node_telemetry.get(node_id, {}).get("last_seen"),
+            "readings": readings if online else session.node_telemetry.get(node_id, {}).get("readings", {}),
             "alerts": alerts,
         }
 
@@ -669,8 +820,6 @@ async def simulate_telemetry(session_id: str):
             }
         })
 
-    return {"status": "simulated", "nodes": len(nodes)}
-
 
 # ============================================================================
 # Full Status
@@ -683,21 +832,24 @@ async def get_deploy_status(session_id: str) -> DeployStatusResponse:
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    # Get current devices
-    flash_manager = FlashManager(BUILDS_DIR / "firmware")
-    devices = flash_manager.scan_devices()
-
-    # Add assignments
-    device_list = []
-    for d in devices:
-        device_list.append(DeviceInfo(
-            port=d.port,
-            board_type=d.board_type,
-            chip_name=d.chip_name,
-            vid=d.vid,
-            pid=d.pid,
-            assigned_node=session.flash_assignments.get(d.port),
-        ))
+    # Get current devices (simulated or real)
+    if settings.simulate_hardware:
+        device_list = [DeviceInfo(**d.model_dump()) for d in SIMULATED_DEVICES]
+        for device in device_list:
+            device.assigned_node = session.flash_assignments.get(device.port)
+    else:
+        flash_manager = FlashManager(BUILDS_DIR / "firmware")
+        devices = flash_manager.scan_devices()
+        device_list = []
+        for d in devices:
+            device_list.append(DeviceInfo(
+                port=d.port,
+                board_type=d.board_type,
+                chip_name=d.chip_name,
+                vid=d.vid,
+                pid=d.pid,
+                assigned_node=session.flash_assignments.get(d.port),
+            ))
 
     # Build cloud status
     outputs = None
