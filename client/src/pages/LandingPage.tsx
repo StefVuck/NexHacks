@@ -51,7 +51,7 @@ const LandingPage = () => {
             {/* Navigation */}
             <nav className="relative z-20 flex items-center justify-between px-12 py-6 border-b border-white/[0.08] bg-black/40 backdrop-blur-md">
                 <div className="flex items-center gap-3">
-                    <img src={heliosLogo} alt="Helios" className="w-12 h-12 object-contain" />
+                    <img src={heliosLogo} alt="Helios" className="w-15 h-12 object-contain" />
                     <span className="text-xl font-bold tracking-[0.02em] text-white"></span>
                 </div>
                 <div className="flex items-center gap-8 text-[13px] font-medium">
