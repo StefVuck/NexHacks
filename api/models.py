@@ -57,6 +57,16 @@ class NodePosition(BaseModel):
     y: float
 
 
+class CSVConfig(BaseModel):
+    """Configuration for CSV statistics export (Woodwide AI integration)."""
+
+    enabled: bool = False
+    method: str = "serial"  # "serial" | "sd" | "http"
+    interval_seconds: int = 60
+    fields: list[str] = Field(default_factory=lambda: ["timestamp", "node_id"])
+    max_rows: int = 1000
+
+
 class TestAssertionSpec(BaseModel):
     """Test assertion specification."""
 
@@ -73,6 +83,7 @@ class NodePlacement(BaseModel):
     board_id: str = "lm3s6965"
     position: Optional[NodePosition] = None
     assertions: list[TestAssertionSpec] = Field(default_factory=list)
+    csv_config: Optional[CSVConfig] = None
 
 
 class SystemDesign(BaseModel):

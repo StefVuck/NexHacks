@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 load_dotenv()
 
-from api.routes import build, simulate, deploy, design, projects
+from api.routes import build, simulate, deploy, design, projects, woodwide, woodwide_ai
 from api.websocket import router as ws_router
 
 
@@ -22,6 +22,7 @@ async def lifespan(app: FastAPI):
     """Startup and shutdown events."""
     # Startup
     print("🚀 Swarm Architect API starting...")
+    print("📊 Woodwide CSV service initialized")
     yield
     # Shutdown
     print("👋 Swarm Architect API shutting down...")
@@ -44,7 +45,6 @@ app.add_middleware(
 )
 
 # Include routers
-app.include_router(projects.router, prefix="/api/projects", tags=["projects"])
 app.include_router(design.router, prefix="/api/design", tags=["design"])
 app.include_router(build.router, prefix="/api/build", tags=["build"])
 app.include_router(simulate.router, prefix="/api/simulate", tags=["simulate"])

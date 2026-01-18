@@ -277,6 +277,188 @@ void print_keyval(const char* key, int val) {{
 }}
 '''
 
+# === CSV TEMPLATES (Woodwide AI Integration) ===
+
+# CSV Serial Template - Print CSV to UART
+CSV_SERIAL_TEMPLATE = '''
+// CSV Statistics Export via Serial (Woodwide AI)
+#define CSV_MAX_ROWS 100
+#define CSV_BUFFER_SIZE 2048
+
+typedef struct {{
+    unsigned long timestamp;
+    char node_id[16];
+    float values[8];  // Sensor readings
+    int value_count;
+}} CSVRow;
+
+CSVRow csv_buffer[CSV_MAX_ROWS];
+int csv_row_count = 0;
+int csv_write_index = 0;
+bool csv_header_printed = false;
+
+void csv_init(const char* node_id) {{
+    csv_row_count = 0;
+    csv_write_index = 0;
+    csv_header_printed = false;
+}}
+
+void csv_add_row(const char* node_id, float* values, int count) {{
+    CSVRow* row = &csv_buffer[csv_write_index];
+    row->timestamp = millis();
+    strncpy(row->node_id, node_id, 15);
+    row->node_id[15] = '\\0';
+    row->value_count = count < 8 ? count : 8;
+    for (int i = 0; i < row->value_count; i++) {{
+        row->values[i] = values[i];
+    }}
+    
+    csv_write_index = (csv_write_index + 1) % CSV_MAX_ROWS;
+    if (csv_row_count < CSV_MAX_ROWS) csv_row_count++;
+}}
+
+void csv_print_header(const char** field_names, int field_count) {{
+    Serial.print("timestamp,node_id");
+    for (int i = 0; i < field_count; i++) {{
+        Serial.print(",");
+        Serial.print(field_names[i]);
+    }}
+    Serial.println();
+    csv_header_printed = true;
+}}
+
+void csv_print_all() {{
+    int start_idx = csv_row_count < CSV_MAX_ROWS ? 0 : csv_write_index;
+    for (int i = 0; i < csv_row_count; i++) {{
+        int idx = (start_idx + i) % CSV_MAX_ROWS;
+        CSVRow* row = &csv_buffer[idx];
+        Serial.print(row->timestamp);
+        Serial.print(",");
+        Serial.print(row->node_id);
+        for (int j = 0; j < row->value_count; j++) {{
+            Serial.print(",");
+            Serial.print(row->values[j], 2);
+        }}
+        Serial.println();
+    }}
+}}
+'''
+
+# CSV HTTP Template - Serve CSV via HTTP endpoint (ESP32 only)
+CSV_HTTP_TEMPLATE = '''
+// CSV Statistics Export via HTTP (Woodwide AI - ESP32 only)
+#include <WebServer.h>
+
+#define CSV_MAX_ROWS 100
+
+typedef struct {{
+    unsigned long timestamp;
+    char node_id[16];
+    float values[8];
+    int value_count;
+}} CSVRow;
+
+CSVRow csv_buffer[CSV_MAX_ROWS];
+int csv_row_count = 0;
+int csv_write_index = 0;
+WebServer csv_server(80);
+
+void csv_init(const char* node_id) {{
+    csv_row_count = 0;
+    csv_write_index = 0;
+}}
+
+void csv_add_row(const char* node_id, float* values, int count) {{
+    CSVRow* row = &csv_buffer[csv_write_index];
+    row->timestamp = millis();
+    strncpy(row->node_id, node_id, 15);
+    row->node_id[15] = '\\0';
+    row->value_count = count < 8 ? count : 8;
+    for (int i = 0; i < row->value_count; i++) {{
+        row->values[i] = values[i];
+    }}
+    
+    csv_write_index = (csv_write_index + 1) % CSV_MAX_ROWS;
+    if (csv_row_count < CSV_MAX_ROWS) csv_row_count++;
+}}
+
+void csv_handle_request() {{
+    String csv = "timestamp,node_id,temperature,humidity,pressure\\n";
+    int start_idx = csv_row_count < CSV_MAX_ROWS ? 0 : csv_write_index;
+    for (int i = 0; i < csv_row_count; i++) {{
+        int idx = (start_idx + i) % CSV_MAX_ROWS;
+        CSVRow* row = &csv_buffer[idx];
+        csv += String(row->timestamp) + ",";
+        csv += String(row->node_id);
+        for (int j = 0; j < row->value_count; j++) {{
+            csv += "," + String(row->values[j], 2);
+        }}
+        csv += "\\n";
+    }}
+    csv_server.send(200, "text/csv", csv);
+}}
+
+void csv_server_setup() {{
+    csv_server.on("/data.csv", csv_handle_request);
+    csv_server.begin();
+    Serial.println("CSV server started at http://" + WiFi.localIP().toString() + "/data.csv");
+}}
+
+void csv_server_loop() {{
+    csv_server.handleClient();
+}}
+'''
+
+# CSV SD Card Template - Write CSV to SD card
+CSV_SD_TEMPLATE = '''
+// CSV Statistics Export via SD Card (Woodwide AI)
+#include <SD.h>
+#include <SPI.h>
+
+#define CSV_FILE_PATH "/data.csv"
+#define SD_CS_PIN 5
+
+bool csv_sd_initialized = false;
+File csv_file;
+
+bool csv_sd_init() {{
+    if (!SD.begin(SD_CS_PIN)) {{
+        Serial.println("SD card initialization failed!");
+        return false;
+    }}
+    csv_sd_initialized = true;
+    
+    // Write header if file doesn't exist
+    if (!SD.exists(CSV_FILE_PATH)) {{
+        csv_file = SD.open(CSV_FILE_PATH, FILE_WRITE);
+        if (csv_file) {{
+            csv_file.println("timestamp,node_id,temperature,humidity,pressure");
+            csv_file.close();
+        }}
+    }}
+    return true;
+}}
+
+void csv_sd_write_row(const char* node_id, float* values, int count) {{
+    if (!csv_sd_initialized) return;
+    
+    csv_file = SD.open(CSV_FILE_PATH, FILE_APPEND);
+    if (csv_file) {{
+        csv_file.print(millis());
+        csv_file.print(",");
+        csv_file.print(node_id);
+        for (int i = 0; i < count; i++) {{
+            csv_file.print(",");
+            csv_file.print(values[i], 2);
+        }}
+        csv_file.println();
+        csv_file.close();
+    }} else {{
+        Serial.println("Failed to open CSV file for writing");
+    }}
+}}
+'''
+
 
 def get_template_for_board(board_id: str, features: list[str] | None = None) -> str:
     """Get the appropriate template based on board and required features."""
@@ -299,6 +481,35 @@ def get_template_for_board(board_id: str, features: list[str] | None = None) -> 
         return STM32_UART_TEMPLATE
 
     return ""
+
+
+def get_csv_template(board_id: str, csv_method: str = "serial") -> str:
+    """Get CSV template based on board and export method.
+    
+    Args:
+        board_id: Target board identifier
+        csv_method: "serial", "http", or "sd"
+    
+    Returns:
+        CSV template code or empty string if not supported
+    """
+    if csv_method == "http":
+        # HTTP CSV only supported on ESP32
+        if board_id.startswith("esp32"):
+            return CSV_HTTP_TEMPLATE
+        else:
+            # Fallback to serial for non-ESP32 boards
+            return CSV_SERIAL_TEMPLATE
+    elif csv_method == "sd":
+        # SD card supported on ESP32 and Arduino
+        if board_id.startswith("esp32") or board_id.startswith("arduino"):
+            return CSV_SD_TEMPLATE
+        else:
+            # Fallback to serial for STM32/other boards
+            return CSV_SERIAL_TEMPLATE
+    else:
+        # Serial is supported on all boards
+        return CSV_SERIAL_TEMPLATE
 
 
 def get_platformio_ini(board_id: str, features: list[str] | None = None) -> str:
