@@ -1,11 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Map from './components/Map';
 import LandingPage from './pages/LandingPage';
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Moon, Sun } from "lucide-react";
+import { Moon, Sun, Loader2 } from "lucide-react";
+
+// Lazy load Build and Simulate pages
+const BuildPage = lazy(() => import('./pages/BuildPage'));
+const SimulatePage = lazy(() => import('./pages/SimulatePage'));
+
+// Loading fallback component
+function PageLoader() {
+  return (
+    <div className="min-h-screen bg-[#121212] flex items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+    </div>
+  );
+}
 
 // Simple Map App Component
 function MapApp() {
@@ -54,10 +67,14 @@ function MapApp() {
 function App() {
   return (
     <Router>
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/app" element={<MapApp />} />
-      </Routes>
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/app" element={<MapApp />} />
+          <Route path="/build/:id" element={<BuildPage />} />
+          <Route path="/simulate/:id" element={<SimulatePage />} />
+        </Routes>
+      </Suspense>
     </Router>
   );
 }
