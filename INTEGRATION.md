@@ -302,6 +302,167 @@ Each ESP32 runs in its own Wokwi simulation but connects to real MQTT brokers, e
 | ESP32 | Wokwi | Real WiFi/MQTT | Full (sensors, LEDs, etc.) |
 | Arduino AVR | Not yet | N/A | N/A |
 
+## CSV Statistics Export (Woodwide AI Integration)
+
+The system supports automatic CSV data logging and export for telemetry and statistics. Devices can export sensor readings as CSV files via serial output, SD card storage, or HTTP endpoints.
+
+### CSV Format
+
+Standard CSV format with timestamp and node ID:
+
+```csv
+timestamp,node_id,temperature,humidity,pressure
+1000,sensor_1,25.3,60.2,1013.25
+2000,sensor_1,25.4,60.1,1013.20
+3000,sensor_1,25.5,60.0,1013.15
+```
+
+### Retrieval Methods
+
+| Method | Boards Supported | Hardware Required | Use Case |
+|--------|------------------|-------------------|----------|
+| Serial | All boards | None | Development, debugging, real-time monitoring |
+| SD Card | ESP32, Arduino | SD card module | Long-term data storage, offline logging |
+| HTTP | ESP32 only | WiFi connection | Remote access, web-based dashboards |
+
+### Example 1: Serial CSV Output
+
+```python
+spec = SystemSpec(
+    description="Temperature sensor with CSV logging",
+    board_id="lm3s6965",
+    nodes=[
+        NodeSpec(
+            node_id="sensor_1",
+            description="Read temperature every minute and log to CSV via serial",
+            assertions=[
+                TestAssertion(name="csv_header", pattern="timestamp,node_id"),
+                TestAssertion(name="csv_data", pattern="sensor_1"),
+            ],
+        ),
+    ],
+)
+```
+
+**Generated Output:**
+```
+timestamp,node_id,temperature
+1000,sensor_1,25.3
+2000,sensor_1,25.4
+3000,sensor_1,25.5
+```
+
+### Example 2: SD Card CSV Storage
+
+```python
+spec = ESP32SystemSpec(
+    description="Weather station with SD card logging",
+    board_id="esp32",
+    nodes=[
+        ESP32NodeSpec(
+            node_id="weather_1",
+            description="Log temperature, humidity, and pressure to CSV on SD card every 5 minutes",
+            features=["sd"],
+            assertions=[
+                TestAssertion(name="sd_init", pattern="SD card"),
+                TestAssertion(name="csv_write", pattern="data.csv"),
+            ],
+        ),
+    ],
+)
+```
+
+**CSV File on SD Card (`/data.csv`):**
+```csv
+timestamp,node_id,temperature,humidity,pressure
+300000,weather_1,25.3,60.2,1013.25
+600000,weather_1,25.4,60.1,1013.20
+```
+
+### Example 3: HTTP CSV Endpoint
+
+```python
+spec = ESP32SystemSpec(
+    description="IoT sensor with HTTP CSV endpoint",
+    board_id="esp32",
+    mqtt_broker="broker.hivemq.com",
+    nodes=[
+        ESP32NodeSpec(
+            node_id="iot_sensor_1",
+            description="Serve CSV data at http://device-ip/data.csv with readings from past hour",
+            features=["wifi", "http", "csv"],
+            assertions=[
+                TestAssertion(name="wifi", pattern="connected!"),
+                TestAssertion(name="csv_server", pattern="CSV server started"),
+            ],
+        ),
+    ],
+)
+```
+
+**Access CSV via HTTP:**
+```bash
+curl http://192.168.1.100/data.csv
+```
+
+**Response:**
+```csv
+timestamp,node_id,temperature,humidity,pressure
+1705500000,iot_sensor_1,25.3,60.2,1013.25
+1705500060,iot_sensor_1,25.4,60.1,1013.20
+```
+
+### CSV Configuration API
+
+```typescript
+interface CSVConfig {
+  enabled: boolean;           // Enable CSV export
+  method: "serial" | "sd" | "http";  // Export method
+  interval_seconds: number;   // Logging interval (default: 60)
+  fields: string[];          // CSV columns (default: ["timestamp", "node_id"])
+  max_rows: number;          // Buffer size (default: 1000)
+}
+
+// Add to NodePlacement
+interface NodePlacement {
+  node_id: string;
+  description: string;
+  board_id: string;
+  csv_config?: CSVConfig;
+  // ... other fields
+}
+```
+
+### Automatic CSV Detection
+
+The system automatically detects CSV requirements from natural language descriptions containing keywords:
+- "CSV"
+- "statistics"
+- "data export"
+- "logging"
+- "log data"
+- "export data"
+
+When detected, the firmware generator automatically includes CSV buffer management and export code.
+
+### Hardware Requirements
+
+**Serial CSV:**
+- All boards supported
+- No additional hardware needed
+- Output via UART/semihosting
+
+**SD Card CSV:**
+- ESP32: SD card via SPI or SDIO
+- Arduino: SD card shield
+- STM32: SPI SD card module
+- Typical wiring: CS=5, MOSI=23, MISO=19, SCK=18
+
+**HTTP CSV:**
+- ESP32 only (requires WiFi)
+- Web server runs on port 80
+- Accessible at `http://<device-ip>/data.csv`
+
 ## Limitations
 
 1. **Wokwi requires internet** - Simulations connect to Wokwi cloud

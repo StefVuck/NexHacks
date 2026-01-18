@@ -225,6 +225,10 @@ class GenerationLoop:
     ) -> str:
         """Call Claude to generate firmware C code for a node."""
         constraints = get_constraints_prompt(board)
+        
+        # Detect CSV requirements from node description
+        csv_keywords = ["csv", "statistics", "data export", "logging", "log data", "export data"]
+        needs_csv = any(keyword in node.description.lower() for keyword in csv_keywords)
 
         system_prompt = f"""You are an embedded systems expert generating bare-metal firmware.
 
@@ -251,6 +255,28 @@ Required output patterns (must appear in semihosting output):
 {chr(10).join(f'  - "{a.pattern}"' for a in node.assertions)}
 
 Write ONLY the main() function and helpers. Startup code is already provided."""
+
+        # Add CSV-specific instructions if detected
+        if needs_csv:
+            csv_instructions = """
+
+IMPORTANT - CSV DATA EXPORT REQUIRED:
+The user has requested CSV data logging/export. Please implement the following:
+
+1. Create a CSV buffer to store readings with columns: timestamp,node_id,<sensor_fields>
+2. Use a circular buffer approach to handle memory constraints
+3. Append sensor readings at regular intervals (every N seconds based on description)
+4. Export CSV data via serial output (print to semihosting)
+5. Include a CSV header row on first output
+6. Format: timestamp,node_id,value1,value2,...
+7. Example output:
+   timestamp,node_id,temperature,humidity
+   1000,sensor_1,25.3,60.2
+   2000,sensor_1,25.4,60.1
+
+Keep the buffer size reasonable for the available RAM. Use simple data structures.
+Print the CSV header once, then print data rows as they are collected."""
+            user_prompt += csv_instructions
 
         if previous_error:
             user_prompt += f"\n\nPREVIOUS ATTEMPT FAILED:\n{previous_error}\n\nFix all issues."
