@@ -29,7 +29,7 @@ const LandingPage = () => {
     }, []);
 
     return (
-        <div className="h-screen bg-[#0a0a0a] text-white font-sans selection:bg-blue-500/30 overflow-hidden relative">
+        <div className="fixed inset-0 bg-[#0a0a0a] text-white font-sans selection:bg-blue-500/30 overflow-hidden">
             {/* Globe Background */}
             <div className="fixed inset-0 z-0 opacity-40">
                 <Suspense fallback={<div className="w-full h-full bg-[#0a0a0a]" />}>
