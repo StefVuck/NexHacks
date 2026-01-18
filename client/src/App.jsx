@@ -21,6 +21,9 @@ function PageLoader() {
   );
 }
 
+// Lazy load DeployPage for better initial load
+const DeployPage = lazy(() => import('./pages/DeployPage'));
+
 // Simple Map App Component
 function MapApp() {
   const [theme, setTheme] = useState('dark');
@@ -60,6 +63,18 @@ function MapApp() {
           </div>
         </div>
       </Card>
+    </div>
+  );
+}
+
+// Loading fallback for lazy-loaded pages
+function PageLoader() {
+  return (
+    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+      <div className="text-center">
+        <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+        <p className="text-gray-400 text-sm">Loading...</p>
+      </div>
     </div>
   );
 }
