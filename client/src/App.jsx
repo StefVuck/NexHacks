@@ -1,7 +1,8 @@
-import React, { useState, lazy, Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import React, { useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Map from './components/Map';
 import LandingPage from './pages/LandingPage';
+import DesignPage from './pages/DesignPage';
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -67,14 +68,16 @@ function MapApp() {
 function App() {
   return (
     <Router>
-      <Suspense fallback={<PageLoader />}>
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/app" element={<MapApp />} />
-          <Route path="/build/:id" element={<BuildPage />} />
-          <Route path="/simulate/:id" element={<SimulatePage />} />
-        </Routes>
-      </Suspense>
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/app" element={<Navigate to="/design" replace />} />
+        <Route path="/design" element={<Navigate to={`/design/new-${Date.now()}`} replace />} />
+        <Route path="/design/:id" element={<DesignPage />} />
+        {/* TODO: Add Build, Simulate, Deploy routes when implemented */}
+        {/* <Route path="/build/:id" element={<BuildPage />} /> */}
+        {/* <Route path="/simulate/:id" element={<SimulatePage />} /> */}
+        {/* <Route path="/deploy/:id" element={<DeployPage />} /> */}
+      </Routes>
     </Router>
   );
 }
