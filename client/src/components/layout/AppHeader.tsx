@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDesignStore } from '../../stores/designStore';
+import { useProjectStore } from '../../stores/projectStore';
 import { StageTabs } from './StageTabs';
 import { ProgressIndicator } from './ProgressIndicator';
 import { cn } from '../../lib/utils';
@@ -11,6 +12,8 @@ import {
   Loader2,
   CheckCircle,
   AlertCircle,
+  FolderOpen,
+  ChevronLeft,
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import heliosLogo from '../../assets/helios.png';
@@ -19,19 +22,25 @@ interface AppHeaderProps {
   className?: string;
   showStageTabs?: boolean;
   showProgress?: boolean;
+  projectName?: string;
 }
 
 export const AppHeader: React.FC<AppHeaderProps> = ({
   className,
   showStageTabs = true,
   showProgress = true,
+  projectName: propProjectName,
 }) => {
   const navigate = useNavigate();
-  const projectName = useDesignStore((state) => state.settings.general.name);
+  const currentProject = useProjectStore((state) => state.currentProject);
+  const designStoreName = useDesignStore((state) => state.settings.general.name);
   const isDirty = useDesignStore((state) => state.isDirty);
   const isLoading = useDesignStore((state) => state.isLoading);
   const lastSaved = useDesignStore((state) => state.lastSaved);
   const openSettingsModal = useDesignStore((state) => state.openSettingsModal);
+
+  // Use prop > current project > design store name
+  const projectName = propProjectName || currentProject?.name || designStoreName || 'Untitled Project';
 
   const handleSave = async () => {
     // TODO: API call to POST /api/design/save
@@ -57,14 +66,27 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
     >
       {/* Top bar */}
       <div className="flex items-center justify-between px-4 py-3">
-        {/* Left: Logo and project name */}
-        <div className="flex items-center gap-4">
+        {/* Left: Logo, back button, and project name */}
+        <div className="flex items-center gap-3">
           <button
             onClick={() => navigate('/')}
             className="flex items-center gap-2 hover:opacity-80 transition-opacity"
           >
             <img src={heliosLogo} alt="Helios" className="w-10 h-8 object-contain" />
           </button>
+
+          <div className="h-6 w-px bg-white/10" />
+
+          {/* Back to projects */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate('/projects')}
+            className="text-gray-400 hover:text-white gap-1"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            <FolderOpen className="w-4 h-4" />
+          </Button>
 
           <div className="h-6 w-px bg-white/10" />
 

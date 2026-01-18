@@ -1,0 +1,39 @@
+{
+  "dcd1d1bb-b334-458a-a555-7749c6d2215f": {
+    "id": "dcd1d1bb-b334-458a-a555-7749c6d2215f",
+    "name": "aaa",
+    "description": "aa",
+    "created_at": "2026-01-18T02:25:56.203021",
+    "updated_at": "2026-01-18T02:26:03.311738",
+    "current_stage": "build",
+    "spec": {
+      "prompt": "",
+      "nodes": [
+        {
+          "node_id": "stm32f103c8_vzhq5kqig",
+          "description": "ARM Cortex-M3 MCU",
+          "board_type": "stm32f103c8",
+          "lat": 40.4432,
+          "lng": -79.9428
+        },
+        {
+          "node_id": "lm3s6965_ftcls9jeo",
+          "description": "Best QEMU support for simulation",
+          "board_type": "lm3s6965",
+          "lat": 40.44420051057659,
+          "lng": -79.9392630723445
+        }
+      ],
+      "connections": [
+        {}
+      ]
+    },
+    "design_complete": true,
+    "build_complete": false,
+    "simulate_complete": false,
+    "deploy_complete": false,
+    "build_results": null,
+    "cloud_status": "idle",
+    "terraform_outputs": null
+  }
+}

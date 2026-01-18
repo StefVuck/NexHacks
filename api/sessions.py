@@ -116,11 +116,13 @@ class SessionManager:
     def __init__(self):
         self.sessions: dict[str, SessionState] = {}
 
-    def create_session(self) -> str:
-        """Create a new session and return its ID."""
-        session_id = str(uuid.uuid4())
-        self.sessions[session_id] = SessionState(session_id=session_id)
-        return session_id
+    def create_session(self, session_id: Optional[str] = None) -> SessionState:
+        """Create a new session and return it."""
+        if session_id is None:
+            session_id = str(uuid.uuid4())
+        if session_id not in self.sessions:
+            self.sessions[session_id] = SessionState(session_id=session_id)
+        return self.sessions[session_id]
 
     def get_session(self, session_id: str) -> Optional[SessionState]:
         """Get session by ID."""
@@ -134,7 +136,13 @@ class SessionManager:
                 session.build_task.cancel()
             if session.simulate_task and not session.simulate_task.done():
                 session.simulate_task.cancel()
+            if session.terraform_task and not session.terraform_task.done():
+                session.terraform_task.cancel()
             del self.sessions[session_id]
+
+    def remove_session(self, session_id: str):
+        """Alias for delete_session."""
+        self.delete_session(session_id)
 
     def list_sessions(self) -> list[str]:
         """List all session IDs."""

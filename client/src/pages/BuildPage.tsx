@@ -7,6 +7,8 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useBuild } from '../hooks/useBuild';
+import { useProjects } from '../hooks/useProjects';
+import { useProjectStore } from '../stores/projectStore';
 import { NodeList } from '../components/build/NodeList';
 import { DetailPanel } from '../components/build/DetailPanel';
 import { BuildProgress } from '../components/build/BuildProgress';
@@ -21,12 +23,16 @@ import {
   CheckCircle2,
   Wifi,
   WifiOff,
+  FolderOpen,
 } from 'lucide-react';
 
 export default function BuildPage() {
   const { id: sessionId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const currentProject = useProjectStore((state) => state.currentProject);
+  const { loadProject } = useProjects();
+  const projectName = currentProject?.name || 'Build';
 
   const {
     status,
@@ -41,6 +47,13 @@ export default function BuildPage() {
     retryNode,
     skipNode,
   } = useBuild();
+
+  // Load project if not already loaded
+  useEffect(() => {
+    if (sessionId && (!currentProject || currentProject.id !== sessionId)) {
+      loadProject(sessionId);
+    }
+  }, [sessionId, currentProject, loadProject]);
 
   // Load existing session on mount
   useEffect(() => {
@@ -114,14 +127,26 @@ export default function BuildPage() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => navigate(-1)}
+                onClick={() => navigate('/projects')}
+                className="text-gray-400 hover:text-white"
+                title="Back to Projects"
+              >
+                <FolderOpen className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate(`/design/${sessionId}`)}
                 className="text-gray-400 hover:text-white"
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Back
+                Design
               </Button>
               <div className="h-6 w-px bg-gray-700" />
-              <h1 className="text-xl font-semibold">Build Stage</h1>
+              <div>
+                <h1 className="text-xl font-semibold">{projectName}</h1>
+                <p className="text-xs text-gray-500">Build Stage</p>
+              </div>
             </div>
 
             <div className="flex items-center gap-4">

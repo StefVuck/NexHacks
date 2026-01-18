@@ -1,5 +1,6 @@
 import { useCallback, useEffect } from 'react';
 import { useDesignStore } from '../stores/designStore';
+import { useProjectStore } from '../stores/projectStore';
 import { buildApi } from '../api/client';
 import type {
   Device,
@@ -10,8 +11,7 @@ import type {
 } from '../types/design';
 import type { BuildNode } from '../api/client';
 
-// TODO: Replace with actual API client for other methods
-const API_BASE = '/api';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 /**
  * Hook for design-related API operations
@@ -30,6 +30,8 @@ export function useDesign(projectId?: string) {
     prompt,
   } = useDesignStore();
 
+  const { setCurrentProject } = useProjectStore();
+
   // Load project on mount if projectId provided
   useEffect(() => {
     if (projectId) {
@@ -39,37 +41,85 @@ export function useDesign(projectId?: string) {
   }, [projectId]);
 
   /**
-   * Load an existing design project
+   * Load an existing design project from the backend
    */
   const loadProject = useCallback(async (id: string) => {
     setLoading(true);
     try {
-      // TODO: API call to GET /api/design/{id}
-      console.log('Load project:', id);
+      const response = await fetch(`${API_BASE}/api/projects/${id}`);
+      if (response.ok) {
+        const project = await response.json();
+        setCurrentProject(project);
+
+        // If project has saved spec, import it
+        if (project.spec && project.spec.nodes && project.spec.nodes.length > 0) {
+          // Map project spec nodes to design devices
+          const importedDevices = project.spec.nodes.map((node: any) => ({
+            id: node.node_id || `device-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            nodeId: node.node_id,
+            name: node.description || node.node_id,
+            description: node.description || '',
+            boardType: node.board_type || 'esp32',
+            position: { x: node.lng || -79.9428, y: node.lat || 40.4432 },
+            features: [],
+            assertions: [],
+          }));
+
+          if (importedDevices.length > 0) {
+            importDesign(importedDevices, project.spec.connections || []);
+          }
+        }
+        console.log('Loaded project:', project.name);
+      }
     } catch (error) {
       console.error('Failed to load project:', error);
     } finally {
       setLoading(false);
     }
-  }, [setLoading, importDesign]);
+  }, [setLoading, importDesign, setCurrentProject]);
 
   /**
-   * Save the current design
+   * Save the current design to the project
    */
   const saveProject = useCallback(async (): Promise<SaveDesignResponse | null> => {
+    if (!projectId) return null;
+
     setLoading(true);
     try {
-      // TODO: API call to POST /api/design/save
-      console.log('Save project - TODO: implement API call');
-      markSaved();
-      return { id: projectId || 'mock-id', savedAt: Date.now() };
+      // Save spec to project
+      const spec = {
+        prompt: prompt || settings.general.description,
+        nodes: devices.map(d => ({
+          node_id: d.nodeId,
+          description: d.description || d.name,
+          board_type: d.boardType,
+          lat: d.position.y,
+          lng: d.position.x,
+        })),
+        connections: connections.map(c => ({
+          from: c.from,
+          to: c.to,
+        })),
+      };
+
+      const response = await fetch(`${API_BASE}/api/projects/${projectId}/spec`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(spec),
+      });
+
+      if (response.ok) {
+        markSaved();
+        return { id: projectId, savedAt: Date.now() };
+      }
+      return null;
     } catch (error) {
       console.error('Failed to save project:', error);
       return null;
     } finally {
       setLoading(false);
     }
-  }, [devices, connections, settings, mode, prompt, setLoading, markSaved, projectId]);
+  }, [devices, connections, settings, prompt, setLoading, markSaved, projectId]);
 
   /**
    * Parse a natural language prompt into device layout
@@ -134,12 +184,17 @@ export function useDesign(projectId?: string) {
 
   /**
    * Proceed to build stage
-   * Returns session ID if successful, null/false otherwise
+   * Returns session ID (project ID) if successful, null/false otherwise
    */
   const proceedToBuild = useCallback(async () => {
     // Validate design has at least one device
     if (devices.length === 0) {
       console.error('Cannot proceed: no devices in design');
+      return null;
+    }
+
+    if (!projectId) {
+      console.error('Cannot proceed: no project ID');
       return null;
     }
 
@@ -152,6 +207,11 @@ export function useDesign(projectId?: string) {
         return null;
       }
 
+      // Update project stage
+      await fetch(`${API_BASE}/api/projects/${projectId}/stage/build`, {
+        method: 'POST',
+      });
+
       // Map devices to BuildNodes
       const buildNodes: BuildNode[] = devices.map(d => ({
         node_id: d.nodeId,
@@ -163,7 +223,7 @@ export function useDesign(projectId?: string) {
         }))
       }));
 
-      // Call the REAL API to start build
+      // Call the REAL API to start build with project ID as session ID
       // Use the first device's board type as the main board type (or settings default)
       const boardId = devices[0].boardType || settings.hardware.defaultBoard;
 
@@ -171,22 +231,20 @@ export function useDesign(projectId?: string) {
         description: settings.general.description || 'Swarm Build',
         board_id: boardId,
         nodes: buildNodes,
+        session_id: projectId, // Use project ID as session ID
       });
 
       console.log('Build started successfully:', response);
-      return response.session_id;
+      // Return project ID as the session ID for consistent navigation
+      return projectId;
 
     } catch (error) {
       console.error('Failed to start build:', error);
-      // Fallback for demo/offline mode if API fails?
-      // No, user needs to know it failed.
-      // But for development continuation request...
-      // We throw.
       throw error;
     } finally {
       setLoading(false);
     }
-  }, [devices, saveProject, settings.hardware.defaultBoard, settings.general.description, setLoading]);
+  }, [devices, saveProject, settings.hardware.defaultBoard, settings.general.description, setLoading, projectId]);
 
   return {
     loadProject,

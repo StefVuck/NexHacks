@@ -165,6 +165,7 @@ class BuildStartRequest(BaseModel):
     """Request to start build process."""
 
     design_id: Optional[str] = None
+    session_id: Optional[str] = None  # Use existing project ID as session ID
     description: str = ""
     board_id: str = "lm3s6965"
     nodes: list[dict] = Field(default_factory=list)

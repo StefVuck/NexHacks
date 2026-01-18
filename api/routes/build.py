@@ -38,9 +38,13 @@ async def start_build(request: BuildStartRequest):
     if not toolchain_ok:
         raise HTTPException(status_code=400, detail=toolchain_error)
 
-    # Create new session
-    session_id = session_manager.create_session()
-    session = session_manager.get_session(session_id)
+    # Create or get existing session (use provided session_id if available, e.g., from project)
+    if request.session_id:
+        session = session_manager.create_session(request.session_id)
+        session_id = request.session_id
+    else:
+        session = session_manager.create_session()
+        session_id = session.session_id
 
     # Build settings from request or defaults
     build_settings = request.settings or BuildSettings(

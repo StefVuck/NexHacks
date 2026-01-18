@@ -59,7 +59,7 @@ const LandingPage = () => {
                     <a href="#technology" className="text-gray-400 hover:text-white transition-colors">Technology</a>
                     <a href="#mission" className="text-gray-400 hover:text-white transition-colors">Mission</a>
                     <button
-                        onClick={() => navigate('/app')}
+                        onClick={() => navigate('/projects')}
                         className="px-5 py-2.5 bg-white text-black hover:bg-gray-200 transition-all flex items-center gap-2 font-semibold text-[13px] tracking-wide"
                     >
                         <span>LAUNCH PLATFORM</span>
@@ -123,7 +123,7 @@ const LandingPage = () => {
                                 {typedText}<span className="animate-pulse">_</span>
                             </div>
                             <button
-                                onClick={() => navigate('/app')}
+                                onClick={() => navigate('/projects')}
                                 className="ml-4 px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold tracking-wider uppercase transition-colors"
                             >
                                 EXECUTE

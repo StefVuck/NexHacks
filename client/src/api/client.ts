@@ -25,6 +25,7 @@ export interface BuildStartRequest {
   description: string;
   board_id: string;
   nodes: BuildNode[];
+  session_id?: string; // Optional: use existing project ID as session ID
   settings?: {
     max_iterations?: number;
     simulation_timeout_seconds?: number;

@@ -7,6 +7,8 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSimulation } from '../hooks/useSimulation';
+import { useProjects } from '../hooks/useProjects';
+import { useProjectStore } from '../stores/projectStore';
 import { TopologyView } from '../components/simulate/TopologyView';
 import { MessageLog } from '../components/simulate/MessageLog';
 import { NodePanel } from '../components/simulate/NodePanel';
@@ -24,6 +26,7 @@ import {
   Wifi,
   WifiOff,
   Clock,
+  FolderOpen,
 } from 'lucide-react';
 
 export default function SimulatePage() {
@@ -31,6 +34,9 @@ export default function SimulatePage() {
   const navigate = useNavigate();
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [filterNodeId, setFilterNodeId] = useState<string | null>(null);
+  const currentProject = useProjectStore((state) => state.currentProject);
+  const { loadProject } = useProjects();
+  const projectName = currentProject?.name || 'Simulate';
 
   const {
     status,
@@ -49,6 +55,13 @@ export default function SimulatePage() {
     stopSimulation,
     setSpeed,
   } = useSimulation();
+
+  // Load project if not already loaded
+  useEffect(() => {
+    if (sessionId && (!currentProject || currentProject.id !== sessionId)) {
+      loadProject(sessionId);
+    }
+  }, [sessionId, currentProject, loadProject]);
 
   // Initialize session on mount
   useEffect(() => {
@@ -100,14 +113,26 @@ export default function SimulatePage() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => navigate(-1)}
+                onClick={() => navigate('/projects')}
+                className="text-gray-400 hover:text-white"
+                title="Back to Projects"
+              >
+                <FolderOpen className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate(`/build/${sessionId}`)}
                 className="text-gray-400 hover:text-white"
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Build
+                Build
               </Button>
               <div className="h-6 w-px bg-gray-700" />
-              <h1 className="text-xl font-semibold">Simulate Stage</h1>
+              <div>
+                <h1 className="text-xl font-semibold">{projectName}</h1>
+                <p className="text-xs text-gray-500">Simulate Stage</p>
+              </div>
             </div>
 
             <div className="flex items-center gap-4">

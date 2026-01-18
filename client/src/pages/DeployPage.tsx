@@ -1,7 +1,9 @@
 import React, { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Settings, Rocket, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Settings, Rocket, AlertCircle, FolderOpen } from 'lucide-react';
+import { useProjectStore } from '@/stores/projectStore';
+import { useProjects } from '@/hooks/useProjects';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -16,6 +18,8 @@ import { useDeploy } from '@/hooks/useDeploy';
 export default function DeployPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const currentProject = useProjectStore((state) => state.currentProject);
+  const { loadProject } = useProjects();
 
   const {
     // State
@@ -53,14 +57,22 @@ export default function DeployPage() {
     simulateTelemetry,
   } = useDeploy();
 
-  // Initialize session from URL params
+  const projectName = currentProject?.name || swarmName || 'Deploy';
+
+  // Load project if not already loaded
+  useEffect(() => {
+    if (id && (!currentProject || currentProject.id !== id)) {
+      loadProject(id);
+    }
+  }, [id, currentProject, loadProject]);
+
+  // Initialize deploy session from URL params
   useEffect(() => {
     if (id && !sessionId) {
-      // In a real app, we'd fetch the session/swarm details from the API
-      // For now, we'll use the ID as both session and swarm ID
-      setSession(id, id, `Swarm ${id.slice(0, 8)}`);
+      const name = currentProject?.name || `Swarm ${id.slice(0, 8)}`;
+      setSession(id, id, name);
     }
-  }, [id, sessionId, setSession]);
+  }, [id, sessionId, currentProject, setSession]);
 
   // Mock nodes for testing (in real app, would come from build results)
   const mockNodes = [
@@ -102,18 +114,28 @@ export default function DeployPage() {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => navigate(-1)}
+                onClick={() => navigate('/projects')}
                 className="text-gray-400 hover:text-white"
+                title="Back to Projects"
+              >
+                <FolderOpen className="h-5 w-5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate(`/simulate/${id}`)}
+                className="text-gray-400 hover:text-white"
+                title="Back to Simulate"
               >
                 <ArrowLeft className="h-5 w-5" />
               </Button>
               <div>
                 <h1 className="text-xl font-bold flex items-center gap-2">
                   <Rocket className="h-5 w-5 text-purple-400" />
-                  Deploy
+                  {projectName}
                 </h1>
                 <p className="text-sm text-gray-500 font-mono">
-                  {swarmName || 'Loading...'}
+                  Deploy Stage
                 </p>
               </div>
             </div>
