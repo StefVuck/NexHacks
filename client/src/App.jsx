@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Map from './components/Map';
 import LandingPage from './pages/LandingPage';
 import DesignPage from './pages/DesignPage';
+import DashboardPage from './pages/DashboardPage'; // Added import for DashboardPage
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -72,6 +73,7 @@ function App() {
       <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/" element={<LandingPage />} />
+          <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/app" element={<Navigate to="/design" replace />} />
           <Route path="/design" element={<Navigate to={`/design/new-${Date.now()}`} replace />} />
           <Route path="/design/:id" element={<DesignPage />} />

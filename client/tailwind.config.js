@@ -10,7 +10,8 @@ export default {
     theme: {
         extend: {
             fontFamily: {
-                sans: ['"JetBrains Mono"', 'monospace'],
+                sans: ['"Alliance No 2"', 'Inter', 'sans-serif'],
+                mono: ['"JetBrains Mono"', 'monospace'],
             },
             colors: {
                 border: 'hsl(var(--border))',
