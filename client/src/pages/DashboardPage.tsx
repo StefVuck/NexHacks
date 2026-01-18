@@ -4,9 +4,6 @@ import {
     Zap,
     Activity,
     Server,
-    Minimize2,
-    Maximize2,
-    X,
 } from 'lucide-react';
 import {
     LineChart,
@@ -203,9 +200,6 @@ const Panel: React.FC<{ title: string; children: React.ReactNode; className?: st
                 {title}
             </h3>
             <div className="flex gap-2 text-[#333] group-hover:text-[#555] transition-colors">
-                <Minimize2 className="w-3 h-3" />
-                <Maximize2 className="w-3 h-3" />
-                <X className="w-3 h-3" />
             </div>
         </div>
         <div className="p-0 flex-1 overflow-hidden relative">
@@ -257,9 +251,8 @@ export const DashboardPage: React.FC = () => {
             </header>
 
             <main className="flex-1 p-2 grid grid-cols-12 grid-rows-12 gap-2 overflow-hidden">
-
                 {/* Left Column: Metrics & Controls */}
-                <div className="col-span-3 row-span-8 flex flex-col gap-2">
+                <div className="col-span-3 row-span-12 flex flex-col gap-2">
                     <Panel title="System Status" className="flex-none">
                         <div className="p-3 space-y-3">
                             <div className="grid grid-cols-2 gap-2">
@@ -282,18 +275,20 @@ export const DashboardPage: React.FC = () => {
                     </Panel>
 
                     <Panel title="Process Control" className="flex-1">
-                        <div className="p-3 space-y-2">
-                            <Button variant="outline" className="w-full justify-between rounded-none h-8 text-[10px] border-[#333] hover:bg-white hover:text-black text-gray-300 bg-[#000] font-mono uppercase transition-all">
-                                <span>INIT_DEPLOY_SEQUENCE</span>
-                                <Play className="w-3 h-3" />
-                            </Button>
-                            <Button variant="outline" className="w-full justify-between rounded-none h-8 text-[10px] border-[#333] hover:bg-white hover:text-black text-gray-300 bg-[#000] font-mono uppercase transition-all">
-                                <span>EMERGENCY_HALT</span>
-                                <Zap className="w-3 h-3" />
-                            </Button>
-                            <div className="h-[1px] bg-[#333] my-2"></div>
-                            <div className="text-[9px] text-gray-600 font-mono mb-1">&gt; SYSTEM LOGS</div>
-                            <div className="h-20 bg-[#111] border border-[#333] p-1 font-mono text-[9px] text-gray-400 overflow-y-auto">
+                        <div className="p-3 flex flex-col h-full">
+                            <div className="space-y-2 flex-none">
+                                <Button variant="outline" className="w-full justify-between rounded-none h-8 text-[10px] border-[#333] hover:bg-white hover:text-black text-gray-300 bg-[#000] font-mono uppercase transition-all">
+                                    <span>INIT_DEPLOY_SEQUENCE</span>
+                                    <Play className="w-3 h-3" />
+                                </Button>
+                                <Button variant="outline" className="w-full justify-between rounded-none h-8 text-[10px] border-[#333] hover:bg-white hover:text-black text-gray-300 bg-[#000] font-mono uppercase transition-all">
+                                    <span>EMERGENCY_HALT</span>
+                                    <Zap className="w-3 h-3" />
+                                </Button>
+                            </div>
+                            <div className="h-[1px] bg-[#333] my-2 flex-none"></div>
+                            <div className="text-[9px] text-gray-600 font-mono mb-1 flex-none">&gt; SYSTEM LOGS</div>
+                            <div className="flex-1 bg-[#111] border border-[#333] p-1 font-mono text-[9px] text-gray-400 overflow-y-auto min-h-0">
                                 <div className="text-white">root@helios:~$ status</div>
                                 <div className="text-green-500">ALL SYSTEMS GO.</div>
                                 <div>Waiting for input...</div>
@@ -302,23 +297,39 @@ export const DashboardPage: React.FC = () => {
                     </Panel>
                 </div>
 
-                {/* Bottom Left: Network Topology */}
-                <div className="col-span-3 row-span-4">
-                    <Panel title="Network Topology" className="h-full">
-                        <div className="w-full h-full bg-[#000] relative group">
-                            <NetworkGraph />
-                            <div className="absolute top-2 right-2 text-[9px] text-gray-500 font-mono border border-[#333] bg-black px-1">
-                                NODES: 12 ONLINE
+
+
+
+                {/* Center Column: Intelligence & Data Visualization */}
+                <div className="col-span-6 row-span-12 flex flex-col gap-2">
+                    <Panel title="Wood Wide Intelligence" className="flex-1">
+                        <div className="p-2 font-mono text-[9px] text-green-500/80 h-full overflow-hidden flex flex-col font-bold leading-relaxed">
+                            <div className="mb-2 text-white border-b border-[#333] pb-1">
+                                &gt; WOODWIDE_AI_ANALYSIS --v2.1
+                            </div>
+                            <div className="flex-1 overflow-y-auto space-y-2">
+                                <div>
+                                    <span className="text-gray-500">&gt;</span> OBSERVATION:<br />
+                                    <span className="text-white">Detected latency spike on cluster 0x4 (Node n-005).</span>
+                                </div>
+                                <div>
+                                    <span className="text-gray-500">&gt;</span> IMPACT ANALYSIS:<br />
+                                    <span className="text-orange-400">Throughput degradation risk: HIGH. Potential packet loss &gt; 2%.</span>
+                                </div>
+                                <div>
+                                    <span className="text-gray-500">&gt;</span> RECOMMENDATION:<br />
+                                    <span className="text-white">Isolate Node n-005 and reroute traffic via mesh backbone.</span>
+                                </div>
+                                <div>
+                                    <span className="text-gray-500">&gt;</span> ACTION:<br />
+                                    <span className="animate-pulse">_EXECUTING_AUTOMATED_RESPONSE...</span>
+                                </div>
                             </div>
                         </div>
                     </Panel>
-                </div>
 
-
-                {/* Center Column: Data Visualization */}
-                <div className="col-span-6 row-span-12 flex flex-col gap-2">
-                    {/* Top Graph: Network Traffic */}
-                    <Panel title="Network I/O Stream" className="h-full">
+                    {/* Bottom Graph: Network Traffic */}
+                    <Panel title="Network I/O Stream" className="flex-1">
                         <div className="h-full w-full bg-[#000] p-2 relative">
                             <ResponsiveContainer width="100%" height="100%">
                                 <LineChart data={analyticsData}>
@@ -340,7 +351,7 @@ export const DashboardPage: React.FC = () => {
                 {/* Right Column: Node List & Logs */}
                 <div className="col-span-3 row-span-12 flex flex-col gap-2">
                     <Panel title="Active Nodes Directory" className="h-[60%]">
-                        <div className="overflow-auto scrollbar-hide">
+                        <div className="overflow-auto scrollbar-hide h-full">
                             <table className="w-full text-left font-mono text-[10px]">
                                 <thead className="bg-[#111] text-gray-500 sticky top-0 z-10">
                                     <tr>
@@ -350,7 +361,7 @@ export const DashboardPage: React.FC = () => {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-[#222]">
-                                    {nodes.map((n, i) => (
+                                    {nodes.map((n) => (
                                         <tr key={n.id} className="hover:bg-white hover:text-black cursor-pointer group transition-colors">
                                             <td className="p-2 text-gray-300 group-hover:text-black font-bold">{n.id}</td>
                                             <td className="p-2">
@@ -376,25 +387,13 @@ export const DashboardPage: React.FC = () => {
                         </div>
                     </Panel>
 
-                    <Panel title="Daemon Processes" className="flex-1">
-                        <table className="w-full text-left font-mono text-[10px]">
-                            <thead className="bg-[#000] text-gray-500 border-b border-[#333]">
-                                <tr>
-                                    <th className="p-1">PID</th>
-                                    <th>CMD</th>
-                                    <th className="text-right">MEM</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {processes.map(p => (
-                                    <tr key={p.pid} className="hover:bg-[#111] cursor-pointer text-gray-400">
-                                        <td className="p-1 text-gray-600">{p.pid}</td>
-                                        <td>{p.name}</td>
-                                        <td className="text-right">{p.mem}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                    <Panel title="Network Topology" className="flex-1">
+                        <div className="w-full h-full bg-[#000] relative group">
+                            <NetworkGraph />
+                            <div className="absolute top-2 right-2 text-[9px] text-gray-500 font-mono border border-[#333] bg-black px-1">
+                                NODES: 12 ONLINE
+                            </div>
+                        </div>
                     </Panel>
                 </div>
 
