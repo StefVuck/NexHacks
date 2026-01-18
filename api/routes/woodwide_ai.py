@@ -99,18 +99,25 @@ async def get_predictions(model_id: str, dataset_id: Optional[str] = None):
 @router.get("/insights")
 async def get_traffic_insights():
     """Get AI-powered insights on current traffic data.
-    
+
     Returns summary statistics and predictions.
     """
     csv_service = get_woodwide_service()
-    
+
     # Get basic stats
     stats = csv_service.get_stats()
-    
+
+    # Return insights even if no data
     if stats.get("count", 0) == 0:
-        raise HTTPException(status_code=400, detail="No data available")
-    
-    # Add AI insights
+        return {
+            "basic_stats": stats,
+            "ai_insights": {
+                "status": "waiting",
+                "message": "No sensor data available. Start simulation or connect devices."
+            }
+        }
+
+    # Add AI insights when data is available
     insights = {
         "basic_stats": stats,
         "ai_insights": {
@@ -118,5 +125,5 @@ async def get_traffic_insights():
             "message": "Use POST /api/woodwide/ai/analyze to get AI predictions"
         }
     }
-    
+
     return insights

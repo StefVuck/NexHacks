@@ -4,6 +4,8 @@ import {
     Zap,
     Activity,
     Server,
+    TrendingUp,
+    AlertTriangle,
 } from 'lucide-react';
 import {
     LineChart,
@@ -15,6 +17,7 @@ import {
     CartesianGrid
 } from 'recharts';
 import { Button } from '@/components/ui/button';
+import { useWoodwide } from '@/hooks/useWoodwide';
 
 // --- Mock Data ---
 
@@ -33,21 +36,6 @@ const processes = [
     { pid: 1025, name: 'node_listener', cpu: '0.8%', mem: '45MB', status: 'SLEEP' },
     { pid: 1026, name: 'telemetry_stream', cpu: '4.2%', mem: '210MB', status: 'RUNNING' },
     { pid: 1027, name: 'kernel_task', cpu: '0.1%', mem: '12MB', status: 'IDLE' },
-];
-
-const nodes = [
-    { id: 'n-001', ip: '192.168.1.10', lat: '12ms', load: '0.45', status: 'OK' },
-    { id: 'n-002', ip: '192.168.1.11', lat: '14ms', load: '0.22', status: 'OK' },
-    { id: 'n-003', ip: '192.168.1.12', lat: '15ms', load: '0.31', status: 'OK' },
-    { id: 'n-004', ip: '192.168.1.13', lat: '11ms', load: '0.18', status: 'OK' },
-    { id: 'n-005', ip: '192.168.1.14', lat: '98ms', load: '1.20', status: 'WARN' },
-    { id: 'n-006', ip: '192.168.1.15', lat: '13ms', load: '0.25', status: 'OK' },
-    { id: 'n-007', ip: '192.168.1.16', lat: '14ms', load: '0.28', status: 'OK' },
-    { id: 'n-008', ip: '192.168.1.17', lat: 'N/A', load: '0.00', status: 'ERR' },
-    { id: 'n-009', ip: '192.168.1.18', lat: '16ms', load: '0.41', status: 'OK' },
-    { id: 'n-010', ip: '192.168.1.19', lat: '12ms', load: '0.33', status: 'OK' },
-    { id: 'n-011', ip: '192.168.1.20', lat: '10ms', load: '0.15', status: 'OK' },
-    { id: 'n-012', ip: '192.168.1.21', lat: '14ms', load: '0.39', status: 'OK' },
 ];
 
 // --- Components ---
@@ -216,6 +204,94 @@ const MetricRow: React.FC<{ label: string; value: string }> = ({ label, value })
 );
 
 export const DashboardPage: React.FC = () => {
+    const [demoSessionId, setDemoSessionId] = React.useState<string | null>(null);
+    const [isStartingDemo, setIsStartingDemo] = React.useState(false);
+    const [demoError, setDemoError] = React.useState<string | null>(null);
+
+    const {
+        stats,
+        predictions,
+        insights,
+        readings,
+        isLoading,
+        isAnalyzing,
+        error,
+        analyzeTrafficData,
+    } = useWoodwide({ autoFetch: true, pollInterval: 10000 });
+
+    const handleRunAnalysis = async () => {
+        await analyzeTrafficData('congestion_level');
+    };
+
+    const handleStartDemoSimulation = async () => {
+        try {
+            setIsStartingDemo(true);
+            setDemoError(null);
+
+            // Start simple demo data generation
+            const response = await fetch('http://localhost:8000/api/woodwide/demo/start', {
+                method: 'POST'
+            });
+
+            const result = await response.json();
+
+            if (result.status === 'started' || result.status === 'already_running') {
+                setDemoSessionId('demo-active');
+                console.log('Demo data generation started!');
+            } else {
+                throw new Error(result.message || 'Failed to start demo');
+            }
+        } catch (err: any) {
+            console.error('Failed to start demo:', err);
+            setDemoError(err.message || 'Failed to start demo data generation');
+        } finally {
+            setIsStartingDemo(false);
+        }
+    };
+
+    const handleStopDemoSimulation = async () => {
+        if (!demoSessionId) return;
+        try {
+            await fetch('http://localhost:8000/api/woodwide/demo/stop', {
+                method: 'POST'
+            });
+            setDemoSessionId(null);
+        } catch (err) {
+            console.error('Failed to stop demo:', err);
+        }
+    };
+
+    // Format AI insights for display
+    const formatAiInsights = () => {
+        if (isAnalyzing) {
+            return [
+                { label: 'STATUS', value: 'ANALYZING...', color: 'text-yellow-400' },
+                { label: 'PROGRESS', value: 'Training model...', color: 'text-white' },
+            ];
+        }
+
+        if (predictions) {
+            return [
+                { label: 'MODEL_ID', value: predictions.model_id?.substring(0, 12) + '...', color: 'text-green-500' },
+                { label: 'STATUS', value: predictions.training_status || 'COMPLETE', color: 'text-green-500' },
+                { label: 'DATASET', value: predictions.dataset_id?.substring(0, 12) + '...', color: 'text-white' },
+            ];
+        }
+
+        if (stats && stats.count > 0) {
+            return [
+                { label: 'DATA_POINTS', value: stats.count.toString(), color: 'text-white' },
+                { label: 'NODES', value: stats.nodes?.toString() || '0', color: 'text-white' },
+                { label: 'AVG_SPEED', value: stats.average_speed_kmh?.toFixed(1) + ' km/h' || 'N/A', color: 'text-white' },
+            ];
+        }
+
+        return [
+            { label: 'STATUS', value: 'NO DATA', color: 'text-gray-500' },
+            { label: 'INFO', value: 'Waiting for sensor data...', color: 'text-gray-500' },
+        ];
+    };
+
     return (
         <div className="h-screen bg-[#000] text-[#ccc] font-sans text-xs selection:bg-white/20 overflow-hidden flex flex-col">
             {/* Top Navigation - OS Bar */}
@@ -257,19 +333,23 @@ export const DashboardPage: React.FC = () => {
                         <div className="p-3 space-y-3">
                             <div className="grid grid-cols-2 gap-2">
                                 <div className="bg-[#000] border border-[#333] p-2 text-center group hover:border-[#666] transition-colors cursor-pointer">
-                                    <div className="text-[9px] uppercase text-gray-600 mb-1">Active Nodes</div>
-                                    <div className="text-xl font-bold text-white font-mono">12<span className="text-gray-600 text-sm">/12</span></div>
+                                    <div className="text-[9px] uppercase text-gray-600 mb-1">Data Points</div>
+                                    <div className="text-xl font-bold text-white font-mono">
+                                        {stats?.count || 0}
+                                    </div>
                                 </div>
                                 <div className="bg-[#000] border border-[#333] p-2 text-center group hover:border-[#666] transition-colors cursor-pointer">
-                                    <div className="text-[9px] uppercase text-gray-600 mb-1">Warnings</div>
-                                    <div className="text-xl font-bold text-white font-mono">02</div>
+                                    <div className="text-[9px] uppercase text-gray-600 mb-1">Sensor Nodes</div>
+                                    <div className="text-xl font-bold text-white font-mono">
+                                        {stats?.nodes || 0}
+                                    </div>
                                 </div>
                             </div>
                             <div className="border border-[#333]">
-                                <MetricRow label="KERNEL_VER" value="5.15.0-generic" />
-                                <MetricRow label="UPTIME" value="14d 02h 12m" />
-                                <MetricRow label="LOAD_AVG" value="0.45 0.52 0.48" />
-                                <MetricRow label="SWARM_HASH" value="a1b2...c3d4" />
+                                <MetricRow label="AVG_SPEED" value={stats?.average_speed_kmh ? `${stats.average_speed_kmh.toFixed(1)} km/h` : 'N/A'} />
+                                <MetricRow label="AVG_DENSITY" value={stats?.average_density_percent ? `${stats.average_density_percent.toFixed(1)}%` : 'N/A'} />
+                                <MetricRow label="LOCATIONS" value={stats?.locations?.toString() || '0'} />
+                                <MetricRow label="AI_STATUS" value={predictions ? 'TRAINED' : isAnalyzing ? 'ANALYZING' : 'READY'} />
                             </div>
                         </div>
                     </Panel>
@@ -277,21 +357,34 @@ export const DashboardPage: React.FC = () => {
                     <Panel title="Process Control" className="flex-1">
                         <div className="p-3 flex flex-col h-full">
                             <div className="space-y-2 flex-none">
-                                <Button variant="outline" className="w-full justify-between rounded-none h-8 text-[10px] border-[#333] hover:bg-white hover:text-black text-gray-300 bg-[#000] font-mono uppercase transition-all">
-                                    <span>INIT_DEPLOY_SEQUENCE</span>
-                                    <Play className="w-3 h-3" />
-                                </Button>
-                                <Button variant="outline" className="w-full justify-between rounded-none h-8 text-[10px] border-[#333] hover:bg-white hover:text-black text-gray-300 bg-[#000] font-mono uppercase transition-all">
-                                    <span>EMERGENCY_HALT</span>
-                                    <Zap className="w-3 h-3" />
-                                </Button>
+                                {!demoSessionId ? (
+                                    <Button
+                                        variant="outline"
+                                        onClick={handleStartDemoSimulation}
+                                        disabled={isStartingDemo}
+                                        className="w-full justify-between rounded-none h-8 text-[10px] border-[#333] hover:bg-white hover:text-black text-gray-300 bg-[#000] font-mono uppercase transition-all"
+                                    >
+                                        <span>{isStartingDemo ? 'STARTING...' : 'START_DEMO_SIMULATION'}</span>
+                                        <Play className="w-3 h-3" />
+                                    </Button>
+                                ) : (
+                                    <Button
+                                        variant="outline"
+                                        onClick={handleStopDemoSimulation}
+                                        className="w-full justify-between rounded-none h-8 text-[10px] border-[#333] hover:bg-red-500 hover:text-white text-gray-300 bg-[#000] font-mono uppercase transition-all"
+                                    >
+                                        <span>STOP_SIMULATION</span>
+                                        <Zap className="w-3 h-3" />
+                                    </Button>
+                                )}
                             </div>
                             <div className="h-[1px] bg-[#333] my-2 flex-none"></div>
                             <div className="text-[9px] text-gray-600 font-mono mb-1 flex-none">&gt; SYSTEM LOGS</div>
                             <div className="flex-1 bg-[#111] border border-[#333] p-1 font-mono text-[9px] text-gray-400 overflow-y-auto min-h-0">
                                 <div className="text-white">root@helios:~$ status</div>
-                                <div className="text-green-500">ALL SYSTEMS GO.</div>
-                                <div>Waiting for input...</div>
+                                {demoSessionId && <div className="text-green-500">DEMO SIMULATION RUNNING (Session: {demoSessionId.substring(0, 8)}...)</div>}
+                                {demoError && <div className="text-red-500">ERROR: {demoError}</div>}
+                                {!demoSessionId && !demoError && <div className="text-gray-500">Click START to begin data collection...</div>}
                             </div>
                         </div>
                     </Panel>
@@ -304,26 +397,130 @@ export const DashboardPage: React.FC = () => {
                 <div className="col-span-6 row-span-12 flex flex-col gap-2">
                     <Panel title="Wood Wide Intelligence" className="flex-1">
                         <div className="p-2 font-mono text-[9px] text-green-500/80 h-full overflow-hidden flex flex-col font-bold leading-relaxed">
-                            <div className="mb-2 text-white border-b border-[#333] pb-1">
-                                &gt; WOODWIDE_AI_ANALYSIS --v2.1
+                            <div className="mb-2 text-white border-b border-[#333] pb-1 flex justify-between items-center">
+                                <span>&gt; WOODWIDE_AI_ANALYSIS --v2.1</span>
+                                <Button
+                                    variant="outline"
+                                    onClick={handleRunAnalysis}
+                                    disabled={isAnalyzing || !stats || stats.count === 0}
+                                    className="h-5 px-2 text-[9px] border-[#333] hover:bg-white hover:text-black text-gray-300 bg-[#000] font-mono uppercase transition-all"
+                                >
+                                    {isAnalyzing ? (
+                                        <>
+                                            <Activity className="w-2 h-2 mr-1 animate-spin" />
+                                            ANALYZING
+                                        </>
+                                    ) : (
+                                        <>
+                                            <TrendingUp className="w-2 h-2 mr-1" />
+                                            RUN ANALYSIS
+                                        </>
+                                    )}
+                                </Button>
                             </div>
                             <div className="flex-1 overflow-y-auto space-y-2">
-                                <div>
-                                    <span className="text-gray-500">&gt;</span> OBSERVATION:<br />
-                                    <span className="text-white">Detected latency spike on cluster 0x4 (Node n-005).</span>
-                                </div>
-                                <div>
-                                    <span className="text-gray-500">&gt;</span> IMPACT ANALYSIS:<br />
-                                    <span className="text-orange-400">Throughput degradation risk: HIGH. Potential packet loss &gt; 2%.</span>
-                                </div>
-                                <div>
-                                    <span className="text-gray-500">&gt;</span> RECOMMENDATION:<br />
-                                    <span className="text-white">Isolate Node n-005 and reroute traffic via mesh backbone.</span>
-                                </div>
-                                <div>
-                                    <span className="text-gray-500">&gt;</span> ACTION:<br />
-                                    <span className="animate-pulse">_EXECUTING_AUTOMATED_RESPONSE...</span>
-                                </div>
+                                {error && (
+                                    <div>
+                                        <span className="text-gray-500">&gt;</span> ERROR:<br />
+                                        <span className="text-red-400">{error}</span>
+                                    </div>
+                                )}
+
+                                {formatAiInsights().map((insight, idx) => (
+                                    <div key={idx}>
+                                        <span className="text-gray-500">&gt;</span> {insight.label}:<br />
+                                        <span className={insight.color}>{insight.value}</span>
+                                    </div>
+                                ))}
+
+                                {predictions && predictions.predictions && (
+                                    <>
+                                        <div>
+                                            <span className="text-gray-500">&gt;</span> PREDICTIONS:<br />
+                                            <span className="text-green-400">Model training complete. {Object.keys(predictions.predictions.prediction || {}).length} predictions generated.</span>
+                                        </div>
+                                        <div>
+                                            <span className="text-gray-500">&gt;</span> FORECAST:<br />
+                                            <div className="ml-2 mt-1 grid grid-cols-10 gap-1">
+                                                {Object.entries(predictions.predictions.prediction || {}).slice(0, 50).map(([idx, level]: [string, any]) => (
+                                                    <div
+                                                        key={idx}
+                                                        className={`w-2 h-2 border ${
+                                                            level === 0 ? 'bg-green-600 border-green-600' :
+                                                            level === 1 ? 'bg-yellow-600 border-yellow-600' :
+                                                            level === 2 ? 'bg-orange-600 border-orange-600' :
+                                                            'bg-red-600 border-red-600'
+                                                        }`}
+                                                        title={`Step ${idx}: Congestion Level ${level}`}
+                                                    />
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <span className="text-gray-500">&gt;</span> SUMMARY:<br />
+                                            <span className="text-white ml-2">
+                                                {(() => {
+                                                    const preds = Object.values(predictions.predictions.prediction || {});
+                                                    const counts = [0, 0, 0, 0];
+                                                    preds.forEach((level: any) => counts[level]++);
+                                                    return (
+                                                        <>
+                                                            <div>Low: {counts[0]} | Moderate: {counts[1]}</div>
+                                                            <div>High: {counts[2]} | Severe: {counts[3]}</div>
+                                                        </>
+                                                    );
+                                                })()}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <span className="text-gray-500">&gt;</span> RECOMMENDATION:<br />
+                                            <span className="text-white">
+                                                {(() => {
+                                                    const preds = Object.values(predictions.predictions.prediction || {});
+                                                    const severeCount = preds.filter((l: any) => l >= 2).length;
+                                                    const severePercent = Math.round((severeCount / preds.length) * 100);
+
+                                                    if (severePercent > 30) {
+                                                        return '⚠️ HIGH congestion expected. Consider traffic management measures.';
+                                                    } else if (severePercent > 15) {
+                                                        return '⚡ MODERATE congestion expected. Monitor closely.';
+                                                    } else {
+                                                        return '✓ LOW congestion expected. Normal traffic flow anticipated.';
+                                                    }
+                                                })()}
+                                            </span>
+                                        </div>
+                                    </>
+                                )}
+
+                                {!predictions && !isAnalyzing && stats && stats.count > 0 && (
+                                    <div>
+                                        <span className="text-gray-500">&gt;</span> READY:<br />
+                                        <span className="text-white">
+                                            {stats.count} data points collected. Click "RUN ANALYSIS" to generate predictions.
+                                        </span>
+                                    </div>
+                                )}
+
+                                {(!stats || stats.count === 0) && !isAnalyzing && (
+                                    <div>
+                                        <span className="text-gray-500">&gt;</span> WAITING:<br />
+                                        <span className="text-gray-400">
+                                            No sensor data received. Start simulation or connect devices.
+                                        </span>
+                                    </div>
+                                )}
+
+                                {stats && stats.congestion_distribution && Object.keys(stats.congestion_distribution).length > 0 && !predictions && (
+                                    <div>
+                                        <span className="text-gray-500">&gt;</span> CONGESTION ANALYSIS:<br />
+                                        {Object.entries(stats.congestion_distribution).map(([level, count]) => (
+                                            <div key={level} className="ml-2 text-gray-300">
+                                                Level {level}: {count} readings {parseInt(level) >= 2 ? '⚠️' : ''}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </Panel>
@@ -348,42 +545,71 @@ export const DashboardPage: React.FC = () => {
                     </Panel>
                 </div>
 
-                {/* Right Column: Node List & Logs */}
+                {/* Right Column: Sensor Readings & Logs */}
                 <div className="col-span-3 row-span-12 flex flex-col gap-2">
-                    <Panel title="Active Nodes Directory" className="h-[60%]">
+                    <Panel title="Sensor Readings" className="h-[60%]">
                         <div className="overflow-auto scrollbar-hide h-full">
-                            <table className="w-full text-left font-mono text-[10px]">
-                                <thead className="bg-[#111] text-gray-500 sticky top-0 z-10">
-                                    <tr>
-                                        <th className="p-2 border-b border-[#333]">ID</th>
-                                        <th className="p-2 border-b border-[#333]">STATUS</th>
-                                        <th className="p-2 border-b border-[#333] text-right">LOAD</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-[#222]">
-                                    {nodes.map((n) => (
-                                        <tr key={n.id} className="hover:bg-white hover:text-black cursor-pointer group transition-colors">
-                                            <td className="p-2 text-gray-300 group-hover:text-black font-bold">{n.id}</td>
-                                            <td className="p-2">
-                                                <span className={`px-1 text-[9px] border ${n.status === 'OK' ? 'border-gray-600 text-gray-400 group-hover:border-black group-hover:text-black' :
-                                                    'border-white text-white group-hover:border-black group-hover:text-black'
-                                                    }`}>
-                                                    {n.status}
-                                                </span>
-                                            </td>
-                                            <td className="p-2 text-right text-gray-500 group-hover:text-black">{n.load}</td>
-                                        </tr>
-                                    ))}
-                                    {/* Duplicate nodes for scroll effect */}
-                                    {[...Array(10)].map((_, i) => (
-                                        <tr key={i} className="hover:bg-white hover:text-black cursor-pointer group transition-colors">
-                                            <td className="p-2 text-gray-500 group-hover:text-black">n-0{10 + i}</td>
-                                            <td className="p-2"><span className="px-1 text-[9px] border border-gray-800 text-gray-600 group-hover:border-black group-hover:text-black">IDLE</span></td>
-                                            <td className="p-2 text-right text-gray-600 group-hover:text-black">0.02</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                            {(() => {
+                                // Group readings by node_id, keeping only the latest reading for each sensor
+                                const latestReadings = new Map<string, typeof readings[0]>();
+                                readings.forEach(reading => {
+                                    const existing = latestReadings.get(reading.node_id);
+                                    if (!existing || reading.timestamp > existing.timestamp) {
+                                        latestReadings.set(reading.node_id, reading);
+                                    }
+                                });
+
+                                const uniqueReadings = Array.from(latestReadings.values());
+
+                                return uniqueReadings.length > 0 ? (
+                                    <table className="w-full text-left font-mono text-[9px]">
+                                        <thead className="bg-[#111] text-gray-500 sticky top-0 z-10">
+                                            <tr>
+                                                <th className="px-1 py-2 border-b border-[#333]">ID</th>
+                                                <th className="px-1 py-2 border-b border-[#333]">LOC</th>
+                                                <th className="px-1 py-2 border-b border-[#333] text-right">SPD</th>
+                                                <th className="px-1 py-2 border-b border-[#333] text-right">DEN</th>
+                                                <th className="px-1 py-2 border-b border-[#333] text-right">CNG</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-[#222]">
+                                            {uniqueReadings.map((reading) => (
+                                                <tr key={reading.node_id} className="hover:bg-white hover:text-black cursor-pointer group transition-colors">
+                                                    <td className="px-1 py-2 text-gray-300 group-hover:text-black font-bold truncate max-w-[60px]" title={reading.node_id}>
+                                                        {reading.node_id.replace('traffic_sensor_', 'S')}
+                                                    </td>
+                                                    <td className="px-1 py-2 text-gray-400 group-hover:text-black truncate max-w-[40px]" title={reading.location}>
+                                                        {reading.location.replace('intersection_', '')}
+                                                    </td>
+                                                    <td className="px-1 py-2 text-right text-gray-400 group-hover:text-black">
+                                                        {reading.average_speed_kmh ? `${reading.average_speed_kmh.toFixed(0)}` : '-'}
+                                                    </td>
+                                                    <td className="px-1 py-2 text-right text-gray-400 group-hover:text-black">
+                                                        {reading.traffic_density_percent ? `${reading.traffic_density_percent.toFixed(0)}%` : '-'}
+                                                    </td>
+                                                    <td className="px-1 py-2 text-right group-hover:text-black">
+                                                        <span className={`px-1 text-[8px] border ${
+                                                            reading.congestion_level === 0 ? 'border-green-600 text-green-400' :
+                                                            reading.congestion_level === 1 ? 'border-yellow-600 text-yellow-400' :
+                                                            reading.congestion_level === 2 ? 'border-orange-600 text-orange-400' :
+                                                            'border-red-600 text-red-400'
+                                                        } group-hover:border-black group-hover:text-black`}>
+                                                            {reading.congestion_level ?? '-'}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                ) : (
+                                    <div className="p-4 text-center text-gray-500 font-mono text-[10px]">
+                                        <div className="mb-2">NO SENSOR DATA</div>
+                                        <div className="text-[9px] text-gray-600">
+                                            {demoSessionId ? 'Waiting for sensor readings...' : 'Start simulation to see data'}
+                                        </div>
+                                    </div>
+                                );
+                            })()}
                         </div>
                     </Panel>
 

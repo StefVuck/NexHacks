@@ -57,7 +57,12 @@ const LandingPage = () => {
                 <div className="flex items-center gap-8 text-[13px] font-medium">
                     <a href="#capabilities" className="text-gray-400 hover:text-white transition-colors">Capabilities</a>
                     <a href="#technology" className="text-gray-400 hover:text-white transition-colors">Technology</a>
-                    <a href="#mission" className="text-gray-400 hover:text-white transition-colors">Mission</a>
+                    <button
+                        onClick={() => navigate('/dashboard')}
+                        className="text-gray-400 hover:text-white transition-colors"
+                    >
+                        Dashboard
+                    </button>
                     <button
                         onClick={() => navigate('/projects')}
                         className="px-5 py-2.5 bg-white text-black hover:bg-gray-200 transition-all flex items-center gap-2 font-semibold text-[13px] tracking-wide"

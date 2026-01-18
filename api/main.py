@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 load_dotenv()
 
-from api.routes import build, simulate, deploy, design, projects, woodwide, woodwide_ai
+from api.routes import build, simulate, deploy, design, projects, woodwide, woodwide_ai, woodwide_demo
 from api.websocket import router as ws_router
 
 
@@ -45,13 +45,14 @@ app.add_middleware(
 )
 
 # Include routers
-app.include_router(projects.router, prefix="/api/projects", tags=["projects"])
 app.include_router(design.router, prefix="/api/design", tags=["design"])
 app.include_router(build.router, prefix="/api/build", tags=["build"])
 app.include_router(simulate.router, prefix="/api/simulate", tags=["simulate"])
 app.include_router(deploy.router, prefix="/api/deploy", tags=["deploy"])
-app.include_router(woodwide.router, prefix="/api/woodwide", tags=["woodwide"])
-app.include_router(woodwide_ai.router, prefix="/api/woodwide-ai", tags=["woodwide-ai"])
+app.include_router(projects.router, prefix="/api/projects", tags=["projects"])
+app.include_router(woodwide.router, tags=["woodwide"])  # Already has prefix in router
+app.include_router(woodwide_ai.router, tags=["woodwide-ai"])  # Already has prefix in router
+app.include_router(woodwide_demo.router, tags=["woodwide-demo"])  # Already has prefix in router
 app.include_router(ws_router, tags=["websocket"])
 
 

@@ -109,20 +109,50 @@ async def get_status():
     }
 
 
+@router.get("/readings")
+async def get_readings(node_id: Optional[str] = None, limit: int = 100):
+    """Get raw sensor readings from buffer.
+
+    Args:
+        node_id: Get readings for specific node, or omit for all nodes
+        limit: Maximum number of readings to return (default 100)
+    """
+    service = get_woodwide_service()
+
+    if node_id:
+        readings = service.data_buffer.get(node_id, [])
+    else:
+        # Get all readings from all nodes
+        readings = []
+        for node_readings in service.data_buffer.values():
+            readings.extend(node_readings)
+        # Sort by timestamp (most recent first)
+        readings.sort(key=lambda r: r.timestamp, reverse=True)
+
+    # Limit the number of readings
+    limited_readings = readings[:limit]
+
+    return {
+        "count": len(limited_readings),
+        "total": len(readings),
+        "readings": [r.model_dump() for r in limited_readings]
+    }
+
+
 @router.delete("/clear")
 async def clear_buffer(node_id: Optional[str] = None):
     """Clear buffered data.
-    
+
     Args:
         node_id: Clear specific node, or omit to clear all
     """
     service = get_woodwide_service()
-    
+
     if node_id:
         service.data_buffer[node_id].clear()
     else:
         service.data_buffer.clear()
-    
+
     return {
         "status": "ok",
         "buffer_size": service.get_buffer_size()

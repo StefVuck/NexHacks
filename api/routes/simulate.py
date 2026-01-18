@@ -16,6 +16,7 @@ from api.models import (
     SimulationStatus,
 )
 from api.sessions import session_manager
+from api.woodwide_service import get_woodwide_service, SensorReading
 from config.settings import settings
 
 router = APIRouter()
@@ -139,13 +140,40 @@ async def start_simulation(request: SimulateStartRequest):
 
                         # If no readings from build, generate mock sensor data
                         if not readings:
+                            # Generate realistic traffic sensor data
                             readings = {
                                 "temperature": round(20 + random.random() * 10, 1),
                                 "counter": tick_count // 10,
+                                "frequency_of_cars_ph": random.randint(50, 500),
+                                "average_speed_kmh": round(30 + random.random() * 50, 1),
+                                "traffic_density_percent": round(random.random() * 100, 1),
+                                "heavy_vehicle_ratio": round(random.random() * 0.3, 2),
+                                "road_surface_temp": round(25 + random.random() * 15, 1),
+                                "congestion_level": random.randint(0, 3),
                             }
 
                         # Update node status
                         session.update_sim_node_status(node_id, "online", readings)
+
+                        # Ingest to Woodwide service for AI analysis
+                        try:
+                            woodwide_service = get_woodwide_service()
+                            sensor_reading = SensorReading(
+                                timestamp=int(datetime.now().timestamp() * 1000),
+                                node_id=node_id,
+                                location=f"location_{node_id}",
+                                ambient_temperature=readings.get("temperature"),
+                                frequency_of_cars_ph=readings.get("frequency_of_cars_ph"),
+                                average_speed_kmh=readings.get("average_speed_kmh"),
+                                traffic_density_percent=readings.get("traffic_density_percent"),
+                                heavy_vehicle_ratio=readings.get("heavy_vehicle_ratio"),
+                                road_surface_temp=readings.get("road_surface_temp"),
+                                congestion_level=readings.get("congestion_level"),
+                            )
+                            woodwide_service.ingest_reading(sensor_reading)
+                        except Exception as e:
+                            # Don't fail simulation if Woodwide ingestion fails
+                            print(f"Woodwide ingestion error: {e}")
 
                         # Create simulated message
                         msg = SimulationMessage(

@@ -193,6 +193,104 @@ export const simulateApi = {
   },
 };
 
+// === Woodwide API ===
+
+export interface SensorReading {
+  timestamp: number;
+  node_id: string;
+  location: string;
+  frequency_of_cars_ph?: number;
+  average_speed_kmh?: number;
+  traffic_density_percent?: number;
+  heavy_vehicle_ratio?: number;
+  ambient_temperature?: number;
+  road_surface_temp?: number;
+  congestion_level?: number;
+}
+
+export interface WoodwideStats {
+  count: number;
+  nodes?: number;
+  locations?: number;
+  time_range?: {
+    start: number;
+    end: number;
+  };
+  average_speed_kmh?: number;
+  average_density_percent?: number;
+  congestion_distribution?: Record<number, number>;
+}
+
+export interface WoodwidePredictions {
+  status: string;
+  dataset_id: string;
+  model_id: string;
+  training_status?: string;
+  predictions?: any;
+  csv_file?: string;
+}
+
+export const woodwideApi = {
+  ingestReading: async (reading: SensorReading) => {
+    const response = await api.post('/api/woodwide/ingest', reading);
+    return response.data;
+  },
+
+  ingestBatch: async (readings: SensorReading[]) => {
+    const response = await api.post('/api/woodwide/ingest/batch', readings);
+    return response.data;
+  },
+
+  getStats: async (nodeId?: string) => {
+    const params = nodeId ? { node_id: nodeId } : {};
+    const response = await api.get('/api/woodwide/stats', { params });
+    return response.data as WoodwideStats;
+  },
+
+  getReadings: async (nodeId?: string, limit = 100) => {
+    const params: any = { limit };
+    if (nodeId) params.node_id = nodeId;
+    const response = await api.get('/api/woodwide/readings', { params });
+    return response.data as { count: number; total: number; readings: SensorReading[] };
+  },
+
+  getStatus: async () => {
+    const response = await api.get('/api/woodwide/status');
+    return response.data;
+  },
+
+  exportCsv: async (nodeId?: string, clearBuffer = false) => {
+    const params: any = { clear_buffer: clearBuffer };
+    if (nodeId) params.node_id = nodeId;
+    const response = await api.post('/api/woodwide/export/csv', null, { params });
+    return response.data;
+  },
+
+  analyzeTrafficData: async (predictColumn = 'congestion_level') => {
+    const response = await api.post('/api/woodwide/ai/analyze', null, {
+      params: { predict_column: predictColumn }
+    });
+    return response.data as WoodwidePredictions;
+  },
+
+  getPredictions: async (modelId: string, datasetId?: string) => {
+    const params = datasetId ? { dataset_id: datasetId } : {};
+    const response = await api.get(`/api/woodwide/ai/predictions/${modelId}`, { params });
+    return response.data;
+  },
+
+  getInsights: async () => {
+    const response = await api.get('/api/woodwide/ai/insights');
+    return response.data;
+  },
+
+  clearBuffer: async (nodeId?: string) => {
+    const params = nodeId ? { node_id: nodeId } : {};
+    const response = await api.delete('/api/woodwide/clear', { params });
+    return response.data;
+  },
+};
+
 // WebSocket URL
 export const getWebSocketUrl = (sessionId: string) => {
   const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';

@@ -96,80 +96,41 @@
     "name": "CMU Traffic Monitoring",
     "description": "Traffic Monitoring around CMU Campus",
     "created_at": "2026-01-18T10:03:38.698363",
-    "updated_at": "2026-01-18T10:53:53.070839",
-    "current_stage": "design",
+    "updated_at": "2026-01-18T11:15:29.385313",
+    "current_stage": "build",
     "spec": {
-      "prompt": "Measuring the cars that come past on every individual road segment as a means to eventually do meta-analysis of traffic flow patterns",
+      "prompt": "",
       "nodes": [
         {
-          "node_id": "lm3s6965_dlvqs7mlo",
-          "description": "LM3S6965 (Recommended)",
+          "node_id": "lm3s6965_ftcls9jeo",
+          "description": "Best QEMU support for simulation",
           "board_type": "lm3s6965",
-          "lat": 40.44477618803296,
-          "lng": -79.94316414877142
+          "lat": 40.44383124969693,
+          "lng": -79.94008405708216
         },
         {
-          "node_id": "Forbes n Beeler",
-          "description": "LM3S6965 (Recommended)",
-          "board_type": "lm3s6965",
-          "lat": 40.44407181553123,
-          "lng": -79.93874125848872
+          "node_id": "stm32f407vg_r42b11748",
+          "description": "High-performance ARM MCU",
+          "board_type": "stm32f407vg",
+          "lat": 40.44452985118437,
+          "lng": -79.94268620350972
         },
         {
-          "node_id": "Forbes n Margaret",
-          "description": "LM3S6965 (Recommended)",
-          "board_type": "lm3s6965",
-          "lat": 40.44272655901358,
-          "lng": -79.93788399158977
+          "node_id": "arduino_due_totjtnwdz",
+          "description": "32-bit ARM Arduino (QEMU supported)",
+          "board_type": "arduino_due",
+          "lat": 40.44312540139842,
+          "lng": -79.94284211091761
         },
         {
-          "node_id": "Margaret and Skibo",
-          "description": "LM3S6965 (Recommended)",
+          "node_id": "lm3s6965_r807c7yis",
+          "description": "anbced",
           "board_type": "lm3s6965",
-          "lat": 40.441693060398165,
-          "lng": -79.94031165006396
-        },
-        {
-          "node_id": "Frew n Tech",
-          "description": "LM3S6965 (Recommended)",
-          "board_type": "lm3s6965",
-          "lat": 40.44069933591675,
-          "lng": -79.9423175672721
-        },
-        {
-          "node_id": "Frew n Scheneley",
-          "description": "LM3S6965 (Recommended)",
-          "board_type": "lm3s6965",
-          "lat": 40.440837108763844,
-          "lng": -79.9479155506846
-        },
-        {
-          "node_id": "Scheneley n Neville",
-          "description": "LM3S6965 (Recommended)",
-          "board_type": "lm3s6965",
-          "lat": 40.44139426522307,
-          "lng": -79.94901388045992
-        },
-        {
-          "node_id": "Forbes n S Neville",
-          "description": "LM3S6965 (Recommended)",
-          "board_type": "lm3s6965",
-          "lat": 40.44439203882246,
-          "lng": -79.94671760771213
-        },
-        {
-          "node_id": "Forbes n Morewood",
-          "description": "LM3S6965 (Recommended)",
-          "board_type": "lm3s6965",
-          "lat": 40.44478780469336,
-          "lng": -79.94315163793247
+          "lat": 40.44305059198771,
+          "lng": -79.94272455075212
         }
       ],
       "connections": [
-        {},
-        {},
-        {},
-        {},
         {},
         {},
         {},
@@ -192,36 +153,217 @@
     "updated_at": "2026-01-18T10:55:50.980532",
     "current_stage": "design",
     "spec": {
-      "prompt": "Measuring the cars that come past on every individual road segment as a means to eventually do meta-analysis of traffic flow patterns",
+      "prompt": "",
       "nodes": [
         {
-          "node_id": "lm3s6965_7qor621x1",
-          "description": "LM3S6965 (Recommended)",
+          "node_id": "lm3s6965_ftcls9jeo",
+          "description": "Best QEMU support for simulation",
           "board_type": "lm3s6965",
-          "lat": 40.44471845285997,
-          "lng": -79.94470419461528
+          "lat": 40.44383124969693,
+          "lng": -79.94008405708216
         },
         {
-          "node_id": "lm3s6965_jjobvif3e",
-          "description": "LM3S6965 (Recommended)",
-          "board_type": "lm3s6965",
-          "lat": 40.44399675900951,
-          "lng": -79.93877919065189
+          "node_id": "stm32f407vg_r42b11748",
+          "description": "High-performance ARM MCU",
+          "board_type": "stm32f407vg",
+          "lat": 40.44452985118437,
+          "lng": -79.94268620350972
         },
         {
-          "node_id": "lm3s6965_oh52ba7vu",
-          "description": "LM3S6965 (Recommended)",
-          "board_type": "lm3s6965",
-          "lat": 40.44160140835422,
-          "lng": -79.94028663128884
+          "node_id": "arduino_due_totjtnwdz",
+          "description": "32-bit ARM Arduino (QEMU supported)",
+          "board_type": "arduino_due",
+          "lat": 40.44312540139842,
+          "lng": -79.94284211091761
         }
       ],
       "connections": [
+        {},
         {},
         {}
       ]
     },
     "design_complete": true,
+    "build_complete": false,
+    "simulate_complete": false,
+    "deploy_complete": false,
+    "build_results": null,
+    "cloud_status": "idle",
+    "terraform_outputs": null
+  },
+  "5390962b-5527-409d-91a2-625d075a5641": {
+    "id": "5390962b-5527-409d-91a2-625d075a5641",
+    "name": "Traffic Monitoring Demo",
+    "description": "Demo traffic sensor simulation with Woodwide AI",
+    "created_at": "2026-01-18T11:18:51.126781",
+    "updated_at": "2026-01-18T11:18:51.126792",
+    "current_stage": "design",
+    "spec": {
+      "prompt": null,
+      "nodes": [],
+      "connections": []
+    },
+    "design_complete": false,
+    "build_complete": false,
+    "simulate_complete": false,
+    "deploy_complete": false,
+    "build_results": null,
+    "cloud_status": "idle",
+    "terraform_outputs": null
+  },
+  "e93750be-4d2c-4062-b999-def9901c7f89": {
+    "id": "e93750be-4d2c-4062-b999-def9901c7f89",
+    "name": "Traffic Monitoring Demo",
+    "description": "Demo traffic sensor simulation with Woodwide AI",
+    "created_at": "2026-01-18T11:18:54.589495",
+    "updated_at": "2026-01-18T11:18:54.589502",
+    "current_stage": "design",
+    "spec": {
+      "prompt": null,
+      "nodes": [],
+      "connections": []
+    },
+    "design_complete": false,
+    "build_complete": false,
+    "simulate_complete": false,
+    "deploy_complete": false,
+    "build_results": null,
+    "cloud_status": "idle",
+    "terraform_outputs": null
+  },
+  "0e7d96d0-17ae-417d-8905-5356c08f18dc": {
+    "id": "0e7d96d0-17ae-417d-8905-5356c08f18dc",
+    "name": "Traffic Monitoring Demo",
+    "description": "Demo traffic sensor simulation with Woodwide AI",
+    "created_at": "2026-01-18T11:24:12.528607",
+    "updated_at": "2026-01-18T11:24:12.528631",
+    "current_stage": "design",
+    "spec": {
+      "prompt": null,
+      "nodes": [],
+      "connections": []
+    },
+    "design_complete": false,
+    "build_complete": false,
+    "simulate_complete": false,
+    "deploy_complete": false,
+    "build_results": null,
+    "cloud_status": "idle",
+    "terraform_outputs": null
+  },
+  "3e56e84a-c7e8-4852-907b-b97f0c6f6be5": {
+    "id": "3e56e84a-c7e8-4852-907b-b97f0c6f6be5",
+    "name": "Traffic Monitoring Demo",
+    "description": "Demo traffic sensor simulation with Woodwide AI",
+    "created_at": "2026-01-18T11:25:06.917375",
+    "updated_at": "2026-01-18T11:25:06.917381",
+    "current_stage": "design",
+    "spec": {
+      "prompt": null,
+      "nodes": [],
+      "connections": []
+    },
+    "design_complete": false,
+    "build_complete": false,
+    "simulate_complete": false,
+    "deploy_complete": false,
+    "build_results": null,
+    "cloud_status": "idle",
+    "terraform_outputs": null
+  },
+  "f3623fc1-ae63-44bf-88ad-fc6d5b7d7552": {
+    "id": "f3623fc1-ae63-44bf-88ad-fc6d5b7d7552",
+    "name": "Traffic Monitoring Demo",
+    "description": "Demo traffic sensor simulation with Woodwide AI",
+    "created_at": "2026-01-18T11:25:31.622594",
+    "updated_at": "2026-01-18T11:25:31.622603",
+    "current_stage": "design",
+    "spec": {
+      "prompt": null,
+      "nodes": [],
+      "connections": []
+    },
+    "design_complete": false,
+    "build_complete": false,
+    "simulate_complete": false,
+    "deploy_complete": false,
+    "build_results": null,
+    "cloud_status": "idle",
+    "terraform_outputs": null
+  },
+  "5f59a395-f2c2-47fb-9318-0373abe7f028": {
+    "id": "5f59a395-f2c2-47fb-9318-0373abe7f028",
+    "name": "Traffic Monitoring Demo",
+    "description": "Demo traffic sensor simulation with Woodwide AI",
+    "created_at": "2026-01-18T11:28:36.048707",
+    "updated_at": "2026-01-18T11:28:36.048748",
+    "current_stage": "design",
+    "spec": {
+      "prompt": null,
+      "nodes": [],
+      "connections": []
+    },
+    "design_complete": false,
+    "build_complete": false,
+    "simulate_complete": false,
+    "deploy_complete": false,
+    "build_results": null,
+    "cloud_status": "idle",
+    "terraform_outputs": null
+  },
+  "77684504-4c99-4faa-9597-be4cf9c0edd3": {
+    "id": "77684504-4c99-4faa-9597-be4cf9c0edd3",
+    "name": "Traffic Monitoring Demo",
+    "description": "Demo traffic sensor simulation with Woodwide AI",
+    "created_at": "2026-01-18T11:31:00.611828",
+    "updated_at": "2026-01-18T11:31:00.611841",
+    "current_stage": "design",
+    "spec": {
+      "prompt": null,
+      "nodes": [],
+      "connections": []
+    },
+    "design_complete": false,
+    "build_complete": false,
+    "simulate_complete": false,
+    "deploy_complete": false,
+    "build_results": null,
+    "cloud_status": "idle",
+    "terraform_outputs": null
+  },
+  "78d20159-d766-446d-9974-0d793a5ea328": {
+    "id": "78d20159-d766-446d-9974-0d793a5ea328",
+    "name": "Traffic Monitoring Demo",
+    "description": "Demo traffic sensor simulation with Woodwide AI",
+    "created_at": "2026-01-18T11:31:18.842990",
+    "updated_at": "2026-01-18T11:31:18.842996",
+    "current_stage": "design",
+    "spec": {
+      "prompt": null,
+      "nodes": [],
+      "connections": []
+    },
+    "design_complete": false,
+    "build_complete": false,
+    "simulate_complete": false,
+    "deploy_complete": false,
+    "build_results": null,
+    "cloud_status": "idle",
+    "terraform_outputs": null
+  },
+  "a6a38adc-0222-49a7-aa92-2f5de37f1aa6": {
+    "id": "a6a38adc-0222-49a7-aa92-2f5de37f1aa6",
+    "name": "Traffic Monitoring Demo",
+    "description": "Demo traffic sensor simulation with Woodwide AI",
+    "created_at": "2026-01-18T11:34:02.351020",
+    "updated_at": "2026-01-18T11:34:02.351053",
+    "current_stage": "design",
+    "spec": {
+      "prompt": null,
+      "nodes": [],
+      "connections": []
+    },
+    "design_complete": false,
     "build_complete": false,
     "simulate_complete": false,
     "deploy_complete": false,
