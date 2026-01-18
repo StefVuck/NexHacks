@@ -1,11 +1,25 @@
-import React, { useState, lazy, Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import React, { useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Map from './components/Map';
 import LandingPage from './pages/LandingPage';
+import DesignPage from './pages/DesignPage';
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Moon, Sun } from "lucide-react";
+import { Moon, Sun, Loader2 } from "lucide-react";
+
+// Lazy load Build and Simulate pages
+const BuildPage = lazy(() => import('./pages/BuildPage'));
+const SimulatePage = lazy(() => import('./pages/SimulatePage'));
+
+// Loading fallback component
+function PageLoader() {
+  return (
+    <div className="min-h-screen bg-[#121212] flex items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+    </div>
+  );
+}
 
 // Lazy load DeployPage for better initial load
 const DeployPage = lazy(() => import('./pages/DeployPage'));
@@ -69,13 +83,16 @@ function PageLoader() {
 function App() {
   return (
     <Router>
-      <Suspense fallback={<PageLoader />}>
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/app" element={<MapApp />} />
-          <Route path="/deploy/:id" element={<DeployPage />} />
-        </Routes>
-      </Suspense>
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/app" element={<Navigate to="/design" replace />} />
+        <Route path="/design" element={<Navigate to={`/design/new-${Date.now()}`} replace />} />
+        <Route path="/design/:id" element={<DesignPage />} />
+        {/* TODO: Add Build, Simulate, Deploy routes when implemented */}
+        {/* <Route path="/build/:id" element={<BuildPage />} /> */}
+        {/* <Route path="/simulate/:id" element={<SimulatePage />} /> */}
+        {/* <Route path="/deploy/:id" element={<DeployPage />} /> */}
+      </Routes>
     </Router>
   );
 }
