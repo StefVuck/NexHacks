@@ -6,7 +6,20 @@ import DesignPage from './pages/DesignPage';
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Moon, Sun } from "lucide-react";
+import { Moon, Sun, Loader2 } from "lucide-react";
+
+// Lazy load Build and Simulate pages
+const BuildPage = lazy(() => import('./pages/BuildPage'));
+const SimulatePage = lazy(() => import('./pages/SimulatePage'));
+
+// Loading fallback component
+function PageLoader() {
+  return (
+    <div className="min-h-screen bg-[#121212] flex items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+    </div>
+  );
+}
 
 // Simple Map App Component
 function MapApp() {
