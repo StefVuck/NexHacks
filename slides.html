@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Helios - Business Update 2026</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0a;
+            --text-primary: #ffffff;
+            --text-secondary: #9ca3af; /* gray-400 */
+            --text-muted: #6b7280;    /* gray-500 */
+            --border-thin: #1f2937;
+            --font-sans: 'Inter', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: #111;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 40px;
+            padding: 60px 0;
+        }
+
+        .slide-container {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            height: 720px;
+            width: 1280px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            padding: 40px 60px;
+            overflow: hidden;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        }
+
+        /* Palantir Structural Lines */
+        .slide-container::before {
+            content: '';
+            position: absolute;
+            top: 40px;
+            left: 60px;
+            right: 60px;
+            height: 1px;
+            background: var(--border-thin);
+        }
+
+        .slide-container::after {
+            content: '';
+            position: absolute;
+            bottom: 40px;
+            left: 60px;
+            right: 60px;
+            height: 1px;
+            background: var(--border-thin);
+        }
+
+        /* Metadata */
+        .header-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            font-weight: 500;
+            letter-spacing: 1.5px;
+            margin-bottom: 35px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        .footer-meta {
+            position: absolute;
+            bottom: 15px;
+            left: 60px;
+            right: 60px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Typography */
+        h1 { font-size: 84px; font-weight: 400; letter-spacing: -1px; }
+        h2 { font-size: 48px; font-weight: 400; margin-bottom: 30px; line-height: 1.1; }
+        h3 { font-size: 24px; font-weight: 500; color: var(--text-primary); margin-bottom: 10px; }
+        
+        .content-area {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+        }
+
+        .bullet-list { list-style: none; }
+        .bullet-list li {
+            position: relative;
+            padding-left: 30px;
+            margin-bottom: 18px;
+            font-size: 19px;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+        .bullet-list li::before {
+            content: '→';
+            position: absolute;
+            left: 0;
+            color: var(--text-primary);
+        }
+
+        /* Table Style */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th {
+            text-align: left;
+            font-size: 12px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            padding: 15px 10px;
+            border-bottom: 1px solid var(--border-thin);
+        }
+        td {
+            padding: 20px 10px;
+            border-bottom: 1px solid var(--border-thin);
+            font-size: 18px;
+            color: var(--text-secondary);
+        }
+        td:first-child { color: var(--text-primary); font-weight: 500; width: 25%; }
+
+        /* Grid layouts */
+        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; }
+        .stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+        
+        .hero-text { font-size: 32px; color: var(--text-secondary); line-height: 1.3; }
+        .highlight { color: var(--text-primary); font-weight: 500; }
+
+        .terminal {
+            background: #111;
+            border: 1px solid var(--border-thin);
+            padding: 25px;
+            font-family: var(--font-mono);
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-top: 20px;
+            line-height: 1.6;
+        }
+
+        /* Slide Specifics */
+        .centered-content { justify-content: center; align-items: center; text-align: center; }
+    </style>
+</head>
+<body>
+
+<!-- Slide 1: Title -->
+<div class="slide-container">
+    <div class="header-meta"><span>Q1</span><span>Helios Technologies Inc.</span></div>
+    <div class="content-area centered-content">
+        <h1 style="letter-spacing: 12px; margin-bottom: 10px;">HELIOS</h1>
+        <p class="hero-text" style="font-size: 20px; letter-spacing: 4px; text-transform: uppercase;">Natural Language to Working IoT Systems in Minutes</p>
+        <div style="margin-top: 80px; font-family: var(--font-mono); font-size: 14px; color: var(--text-muted);">BUSINESS UPDATE &bull; 2026</div>
+    </div>
+    <div class="footer-meta"><span>© 2026 Helios Technologies Inc.</span><span>2026</span></div>
+</div>
+
+<!-- Slide 2: The Problem -->
+<div class="slide-container">
+    <div class="header-meta"><span>01</span><span>The Problem</span></div>
+    <div class="content-area">
+        <h2>Building distributed IoT <br>systems is <span style="color: var(--text-muted)">hard</span></h2>
+        <div class="two-col" style="margin-top: 20px;">
+            <ul class="bullet-list">
+                <li>Embedded firmware requires specialized skills (C, memory management, hardware protocols)</li>
+                <li>Testing requires expensive hardware or complex simulator setup</li>
+                <li>Iteration cycles are slow: write → flash → debug → repeat</li>
+            </ul>
+            <ul class="bullet-list">
+                <li>Integration between devices and cloud infrastructure is error-prone</li>
+                <li>Most teams lack embedded engineers</li>
+            </ul>
+        </div>
+        <div style="margin-top: 60px; border-left: 2px solid var(--text-primary); padding-left: 30px;">
+            <p style="font-size: 24px; color: var(--text-secondary);">Result: <span class="highlight">6-12 months</span> to prototype, <span class="highlight">$100K+</span> in development costs</p>
+        </div>
+    </div>
+    <div class="footer-meta"><span>Strategic Overview</span><span>Confidential</span></div>
+</div>
+
+<!-- Slide 3: Our Solution -->
+<div class="slide-container">
+    <div class="header-meta"><span>02</span><span>Our Solution</span></div>
+    <div class="content-area centered-content">
+        <h2>Describe your system. <br><span style="color: var(--text-muted)">We build it.</span></h2>
+        <div class="terminal" style="width: 80%; text-align: left; border-color: var(--text-muted);">
+            <span style="color: #fff;">Prompt:</span> "5 temperature sensors reporting to a central server every 10 seconds. Alert if any reading exceeds 40°C."
+        </div>
+        <div style="margin: 40px 0; font-size: 40px;">↓</div>
+        <div class="stat-grid" style="width: 80%;">
+            <div style="padding: 30px; border: 1px solid var(--border-thin); background: #111;">
+                <h3 style="color: var(--text-secondary); text-transform: uppercase; font-size: 12px; letter-spacing: 1px;">Output A</h3>
+                <div style="font-size: 20px;">Working Firmware</div>
+            </div>
+            <div style="padding: 30px; border: 1px solid var(--border-thin); background: #111;">
+                <h3 style="color: var(--text-secondary); text-transform: uppercase; font-size: 12px; letter-spacing: 1px;">Output B</h3>
+                <div style="font-size: 20px;">Cloud Infrastructure</div>
+            </div>
+        </div>
+    </div>
+    <div class="footer-meta"><span>Verified Behavior Engine</span><span>2026</span></div>
+</div>
+
+<!-- Slide 4: How It Works -->
+<div class="slide-container">
+    <div class="header-meta"><span>03</span><span>Operational Workflow</span></div>
+    <div class="content-area">
+        <h2>Four Stages, <br><span style="color: var(--text-muted)">Fully Automated</span></h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Stage</th>
+                    <th>What Happens</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Design</td>
+                    <td>Place devices on map or describe in plain English</td>
+                </tr>
+                <tr>
+                    <td>Build</td>
+                    <td>AI generates firmware, compiles, iterates until tests pass</td>
+                </tr>
+                <tr>
+                    <td>Simulate</td>
+                    <td>Run virtual devices, verify communication and behavior</td>
+                </tr>
+                <tr>
+                    <td>Deploy</td>
+                    <td>Flash real hardware, provision cloud server</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="footer-meta"><span>Process Control</span><span>Proprietary</span></div>
+</div>
+
+<!-- Slide 5: The Magic - Iterative AI -->
+<div class="slide-container">
+    <div class="header-meta"><span>04</span><span>The Magic - Iterative AI</span></div>
+    <div class="content-area">
+        <h2>Self-Healing <br><span>Code Generation</span></h2>
+        <div class="two-col">
+            <ul class="bullet-list">
+                <li>Claude generates bare-metal C firmware</li>
+                <li>Compile for target board (STM32, ESP32, Arduino)</li>
+                <li>Simulate in QEMU with real memory constraints</li>
+            </ul>
+            <ul class="bullet-list">
+                <li>Run test assertions against output</li>
+                <li>If tests fail → feed errors back → regenerate</li>
+            </ul>
+        </div>
+        <div style="margin-top: 60px; background: #111; padding: 30px; border: 1px solid var(--border-thin);">
+            <p style="font-size: 20px; color: var(--text-secondary);">Up to <span class="highlight">5 iterations</span> until working code, <span class="highlight">automatically</span>.</p>
+        </div>
+    </div>
+    <div class="footer-meta"><span>Agentic Loop Architecture</span><span>2026</span></div>
+</div>
+
+<!-- Slide 6: What You See -->
+<div class="slide-container">
+    <div class="header-meta"><span>05</span><span>Full Visibility</span></div>
+    <div class="content-area">
+        <h2>Full Visibility Into <br><span style="color: var(--text-muted)">the AI's Work</span></h2>
+        <div class="stat-grid">
+            <ul class="bullet-list">
+                <li>Live Claude prompts and responses</li>
+                <li>Generated code with syntax highlighting</li>
+                <li>Compilation output and memory usage</li>
+            </ul>
+            <ul class="bullet-list">
+                <li>Simulation output in real-time</li>
+                <li>Test pass/fail for each assertion</li>
+            </ul>
+        </div>
+        <div style="flex-grow: 1; display: flex; align-items: flex-end;">
+            <p style="font-size: 24px; color: var(--text-muted);">No black box. <span style="color: #fff;">Full transparency.</span></p>
+        </div>
+    </div>
+    <div class="footer-meta"><span>Audit Trail & Debugging</span><span>2026</span></div>
+</div>
+
+<!-- Slide 7: Target Users -->
+<div class="slide-container">
+    <div class="header-meta"><span>06</span><span>Target Users</span></div>
+    <div class="content-area">
+        <h2>Who <span style="color: var(--text-muted)">Benefits</span></h2>
+        <div class="two-col">
+            <div style="border-bottom: 1px solid var(--border-thin); padding-bottom: 20px;">
+                <h3>Hardware Startups</h3>
+                <p style="color: var(--text-secondary);">Prototype IoT products without a full embedded team.</p>
+            </div>
+            <div style="border-bottom: 1px solid var(--border-thin); padding-bottom: 20px;">
+                <h3>Industrial Companies</h3>
+                <p style="color: var(--text-secondary);">Deploy sensor networks without expensive consultants.</p>
+            </div>
+            <div style="border-bottom: 1px solid var(--border-thin); padding-bottom: 20px;">
+                <h3>Educators</h3>
+                <p style="color: var(--text-secondary);">Teach distributed systems with instant feedback loops.</p>
+            </div>
+            <div style="border-bottom: 1px solid var(--border-thin); padding-bottom: 20px;">
+                <h3>Makers</h3>
+                <p style="color: var(--text-secondary);">Go from idea to working hardware in mere hours.</p>
+            </div>
+        </div>
+    </div>
+    <div class="footer-meta"><span>Market Segments</span><span>Helios 2026</span></div>
+</div>
+
+<!-- Slide 8: Technical Differentiation -->
+<div class="slide-container">
+    <div class="header-meta"><span>07</span><span>Technical Differentiation</span></div>
+    <div class="content-area">
+        <h2>Why This <span style="color: var(--text-muted)">Wasn't Possible Before</span></h2>
+        <ul class="bullet-list">
+            <li><strong>LLM Maturity:</strong> Models now generate compilable, high-quality embedded C.</li>
+            <li><strong>Virtualization:</strong> QEMU enables hardware-accurate simulation without physical devices.</li>
+            <li><strong>Semihosting:</strong> Capturing firmware output for automated testing via debug interfaces.</li>
+            <li><strong>Iterative Loops:</strong> Closing the gap between generation and hardware verification.</li>
+        </ul>
+    </div>
+    <div class="footer-meta"><span>Technological Moat</span><span>2026</span></div>
+</div>
+
+<!-- Slide 9: Demo -->
+<div class="slide-container">
+    <div class="header-meta"><span>08</span><span>Live Demo</span></div>
+    <div class="content-area">
+        <h2>From Description to <br><span>Working Firmware</span></h2>
+        <div class="terminal">
+            <span style="color: #fff;">[0s] Input:</span> "Traffic counter on Highway 101, counts vehicles, reports every 10s"<br>
+            <span style="color: #6b7280;">[12s] Generating firmware for STM32F4...</span><br>
+            <span style="color: #6b7280;">[25s] Compiling arm-none-eabi-gcc... SUCCESS</span><br>
+            <span style="color: #6b7280;">[40s] Starting QEMU emulation...</span><br>
+            <span style="color: #fff;">[55s] Output: count: 47 | Status: 200 OK</span><br>
+            <span style="color: #ffffff; background: #22c55e33;">[60s] Test Assertion: PASS</span>
+        </div>
+        <p style="margin-top: 30px; font-size: 20px; color: var(--text-secondary); text-align: center;">60 seconds from prompt to verified firmware.</p>
+    </div>
+    <div class="footer-meta"><span>Real-time Execution</span><span>Demo Mode</span></div>
+</div>
+
+<!-- Slide 10: Call to Action -->
+<div class="slide-container">
+    <div class="header-meta"><span>09</span><span>Conclusion</span></div>
+    <div class="content-area centered-content">
+        <h1 style="letter-spacing: 12px; margin-bottom: 40px;">SWARM ARCHITECT</h1>
+        <p class="hero-text" style="margin-bottom: 20px;">From idea to working IoT system.</p>
+        <p style="font-size: 24px; color: #fff;">No embedded experience required.</p>
+        <div style="margin-top: 100px; border: 1px solid #fff; padding: 20px 40px; font-size: 14px; letter-spacing: 2px; text-transform: uppercase;">Get Started at helios.io</div>
+    </div>
+    <div class="footer-meta"><span>© 2026 Helios Technologies Inc.</span><span>2026</span></div>
+</div>
+
+</body>
+</html>
