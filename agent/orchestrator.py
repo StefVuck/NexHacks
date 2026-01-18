@@ -19,7 +19,7 @@ from simulator.orchestrator import (
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 MODEL = "claude-sonnet-4-20250514"
-MAX_ITERATIONS = 3
+MAX_ITERATIONS = 5
 
 
 def get_constraints_prompt(board: BoardConfig) -> str:
@@ -222,6 +222,7 @@ class GenerationLoop:
         node: NodeSpec,
         board: BoardConfig,
         previous_error: str | None = None,
+        system_context: str | None = None,
     ) -> str:
         """Call Claude to generate firmware C code for a node."""
         constraints = get_constraints_prompt(board)
@@ -245,15 +246,25 @@ Output ONLY the main() function and any helper functions you need.
 No #includes. No startup code. No vector table.
 Code must be valid C that compiles with {board.compiler} -nostdlib."""
 
-        user_prompt = f"""Generate bare-metal firmware for: {node.description}
+        # Build context from system description and node role
+        context_parts = []
+        if system_context:
+            context_parts.append(f"SYSTEM PURPOSE: {system_context}")
+        context_parts.append(f"THIS NODE'S ROLE: {node.description}")
+        full_context = "\n".join(context_parts)
+
+        user_prompt = f"""Generate bare-metal firmware for this node in a distributed IoT system.
+
+{full_context}
 
 Target board: {board.name}
 Architecture: {board.arch.value}
 Available memory: {board.flash_kb}KB Flash, {board.ram_kb}KB RAM
 
 Required output patterns (must appear in semihosting output):
-{chr(10).join(f'  - "{a.pattern}"' for a in node.assertions)}
+{chr(10).join(f'  - "{a.pattern}"' for a in node.assertions) if node.assertions else '  - (none specified - generate reasonable telemetry output)'}
 
+The firmware should simulate sensor readings and output data that reflects the system purpose.
 Write ONLY the main() function and helpers. Startup code is already provided."""
 
         # Add CSV-specific instructions if detected

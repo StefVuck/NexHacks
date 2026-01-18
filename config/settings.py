@@ -13,7 +13,7 @@ class Settings:
     """Application settings with sensible defaults."""
 
     # Build settings
-    max_build_iterations: int = 3
+    max_build_iterations: int = 5
     simulation_timeout_qemu: float = 10.0
     simulation_timeout_wokwi: float = 30.0
 

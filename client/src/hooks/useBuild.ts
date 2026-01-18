@@ -68,6 +68,82 @@ export function useBuild() {
         break;
       }
 
+      case 'llm_request': {
+        const { node_id, iteration, prompt } = data as {
+          node_id: string;
+          iteration: number;
+          prompt: string;
+        };
+        setState((prev) => {
+          const node = prev.nodes[node_id];
+          if (!node) return prev;
+
+          const iterations = [...node.iterations];
+          const iterIndex = iterations.findIndex((i) => i.iteration === iteration);
+          if (iterIndex >= 0) {
+            iterations[iterIndex] = {
+              ...iterations[iterIndex],
+              llm_prompt: prompt,
+            };
+          } else {
+            iterations.push({
+              iteration,
+              llm_prompt: prompt,
+              compile_success: false,
+              simulation_success: false,
+              test_results: [],
+            });
+          }
+
+          return {
+            ...prev,
+            nodes: {
+              ...prev.nodes,
+              [node_id]: { ...node, iterations },
+            },
+          };
+        });
+        break;
+      }
+
+      case 'llm_response': {
+        const { node_id, iteration, response } = data as {
+          node_id: string;
+          iteration: number;
+          response: string;
+        };
+        setState((prev) => {
+          const node = prev.nodes[node_id];
+          if (!node) return prev;
+
+          const iterations = [...node.iterations];
+          const iterIndex = iterations.findIndex((i) => i.iteration === iteration);
+          if (iterIndex >= 0) {
+            iterations[iterIndex] = {
+              ...iterations[iterIndex],
+              llm_response: response,
+            };
+          } else {
+            iterations.push({
+              iteration,
+              llm_response: response,
+              compile_success: false,
+              simulation_success: false,
+              test_results: [],
+            });
+          }
+
+          return {
+            ...prev,
+            nodes: {
+              ...prev.nodes,
+              [node_id]: { ...node, iterations },
+            },
+          };
+        });
+        break;
+      }
+
       case 'code_generated': {
         const { node_id, iteration, code_preview } = data as {
           node_id: string;

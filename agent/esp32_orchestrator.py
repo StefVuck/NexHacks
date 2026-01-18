@@ -15,7 +15,7 @@ from simulator.wokwi import WokwiOrchestrator, WokwiCircuit, WokwiResult, genera
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 MODEL = "claude-sonnet-4-20250514"
-MAX_ITERATIONS = 3
+MAX_ITERATIONS = 5
 
 
 @dataclass

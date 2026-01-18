@@ -67,6 +67,17 @@ async def start_build(request: BuildStartRequest):
             )
             for a in node_data.get("assertions", [])
         ]
+
+        # If no assertions specified, add a default one to ensure iteration happens
+        if not assertions:
+            assertions = [
+                TestAssertion(
+                    name="produces_output",
+                    pattern=":",  # Look for colon which is common in key:value output
+                    required=True,
+                )
+            ]
+
         nodes.append(
             NodeSpec(
                 node_id=node_data["node_id"],
@@ -132,8 +143,56 @@ async def start_build(request: BuildStartRequest):
                         },
                     )
 
-                    # Generate code
-                    code = loop.generate_firmware(node, board, previous_error)
+                    # Build the prompt for visibility
+                    llm_prompt = f"""Generate bare-metal firmware for this node in a distributed IoT system.
+
+SYSTEM PURPOSE: {spec.description}
+
+THIS NODE'S ROLE: {node.description}
+
+Target board: {board.name}
+Architecture: {board.arch.value}
+Available memory: {board.flash_kb}KB Flash, {board.ram_kb}KB RAM
+
+Required output patterns (must appear in semihosting output):
+{chr(10).join(f'  - "{a.pattern}"' for a in node.assertions) if node.assertions else '  - (none specified - generate reasonable telemetry output)'}"""
+
+                    if previous_error:
+                        llm_prompt += f"\n\nPREVIOUS ATTEMPT FAILED:\n{previous_error}\n\nFix all issues."
+
+                    # Broadcast LLM prompt
+                    await session_manager.broadcast_to_session(
+                        session_id,
+                        {
+                            "stage": "build",
+                            "type": "llm_request",
+                            "data": {
+                                "node_id": node.node_id,
+                                "iteration": iteration + 1,
+                                "prompt": llm_prompt,
+                            },
+                        },
+                    )
+
+                    # Generate code with system context
+                    code = loop.generate_firmware(
+                        node, board, previous_error,
+                        system_context=spec.description
+                    )
+
+                    # Broadcast LLM response (the generated code)
+                    await session_manager.broadcast_to_session(
+                        session_id,
+                        {
+                            "stage": "build",
+                            "type": "llm_response",
+                            "data": {
+                                "node_id": node.node_id,
+                                "iteration": iteration + 1,
+                                "response": code[:4000] if code else "",
+                            },
+                        },
+                    )
 
                     # Send code preview
                     await session_manager.broadcast_to_session(

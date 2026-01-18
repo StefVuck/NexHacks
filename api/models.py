@@ -153,7 +153,7 @@ class NodeBuildState(BaseModel):
     board_type: str
     status: NodeBuildStatus = NodeBuildStatus.PENDING
     current_iteration: int = 0
-    max_iterations: int = 3
+    max_iterations: int = 5
     iterations: list[NodeIteration] = Field(default_factory=list)
     final_binary_path: Optional[str] = None
     started_at: Optional[datetime] = None
@@ -167,7 +167,7 @@ class NodeBuildState(BaseModel):
 class BuildSettings(BaseModel):
     """Build configuration settings."""
 
-    max_iterations: int = 3
+    max_iterations: int = 5
     simulation_timeout_seconds: float = 10.0
     board_id: str = "lm3s6965"
 

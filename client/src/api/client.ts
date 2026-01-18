@@ -48,6 +48,8 @@ export interface TestAssertionResult {
 
 export interface NodeIteration {
   iteration: number;
+  llm_prompt?: string;
+  llm_response?: string;
   generated_code?: string;
   compile_output?: string;
   compile_success: boolean;

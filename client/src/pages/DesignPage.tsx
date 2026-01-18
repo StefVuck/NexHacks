@@ -10,7 +10,8 @@ import { SelectionToolbar } from '../components/design/SelectionToolbar';
 import { SettingsModal } from '../components/settings/SettingsModal';
 import { DevicePickerModal } from '../components/design/DevicePickerModal';
 import { Button } from '../components/ui/button';
-import { ArrowRight, Loader2, Plus, AlertCircle, X } from 'lucide-react';
+import { Textarea } from '../components/ui/textarea';
+import { ArrowRight, Loader2, Plus, AlertCircle, X, Bot } from 'lucide-react';
 
 const generateUUID = () => Math.random().toString(36).substr(2, 9);
 
@@ -27,6 +28,8 @@ export const DesignPage: React.FC = () => {
   const closeSettingsModal = useDesignStore((state) => state.closeSettingsModal);
   const setProjectId = useDesignStore((state) => state.setProjectId);
   const completeStage = useDesignStore((state) => state.completeStage);
+  const systemPrompt = useDesignStore((state) => state.settings.general.description);
+  const updateGeneralSettings = useDesignStore((state) => state.updateGeneralSettings);
 
   // Hooks
   const { proceedToBuild } = useDesign(id);
@@ -180,6 +183,25 @@ export const DesignPage: React.FC = () => {
 
         {/* Right sidebar: Device config */}
         <aside className="w-80 bg-[#121212] border-l border-white/10 flex flex-col">
+          {/* System Prompt Section */}
+          <div className="p-4 border-b border-white/10">
+            <div className="flex items-center gap-2 mb-2">
+              <Bot className="w-4 h-4 text-blue-400" />
+              <label className="text-sm font-medium text-gray-300">
+                System Prompt
+              </label>
+            </div>
+            <Textarea
+              value={systemPrompt}
+              onChange={(e) => updateGeneralSettings({ description: e.target.value })}
+              placeholder="Describe what your IoT system should do... e.g., 'Temperature sensors that report readings every 5 seconds and alert if temp exceeds 30C'"
+              className="min-h-[100px] bg-gray-900 border-gray-700 text-sm placeholder:text-gray-600 resize-none"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              This prompt guides Claude when generating firmware for each device.
+            </p>
+          </div>
+
           {/* Add Device Button */}
           <div className="p-4 border-b border-white/10">
             <Button

@@ -50,10 +50,10 @@
     "name": "bbb",
     "description": "bbb",
     "created_at": "2026-01-18T08:53:13.951700",
-    "updated_at": "2026-01-18T09:03:24.949236",
-    "current_stage": "design",
+    "updated_at": "2026-01-18T09:24:21.867310",
+    "current_stage": "build",
     "spec": {
-      "prompt": "",
+      "prompt": "Measuring the cars that come past on every individual road segment as a means to eventually do meta-analysis of traffic flow patterns",
       "nodes": [
         {
           "node_id": "lm3s6965_ftcls9jeo",
