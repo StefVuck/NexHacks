@@ -4,7 +4,7 @@ import type { DevicePaletteItem as DevicePaletteItemType, BoardType } from '../.
 import { cn } from '../../lib/utils';
 import { ScrollArea } from '../ui/scroll-area';
 import { Input } from '../ui/input';
-import { Search, Filter } from 'lucide-react';
+import { Search } from 'lucide-react';
 
 // Available device types
 const deviceCatalog: DevicePaletteItemType[] = [
@@ -175,9 +175,10 @@ const categories: { name: string; boards: BoardType[] }[] = [
 
 interface DevicePaletteProps {
   className?: string;
+  onDeviceSelect?: (device: DevicePaletteItemType) => void;
 }
 
-export const DevicePalette: React.FC<DevicePaletteProps> = ({ className }) => {
+export const DevicePalette: React.FC<DevicePaletteProps> = ({ className, onDeviceSelect }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedCategories, setExpandedCategories] = useState<string[]>(
     categories.map((c) => c.name)
@@ -257,7 +258,11 @@ export const DevicePalette: React.FC<DevicePaletteProps> = ({ className }) => {
                 {isExpanded && (
                   <div className="space-y-2">
                     {categoryDevices.map((device) => (
-                      <DevicePaletteItem key={device.boardType} item={device} />
+                      <DevicePaletteItem
+                        key={device.boardType}
+                        item={device}
+                        onClick={() => onDeviceSelect?.(device)}
+                      />
                     ))}
                   </div>
                 )}
@@ -275,8 +280,8 @@ export const DevicePalette: React.FC<DevicePaletteProps> = ({ className }) => {
       </ScrollArea>
 
       {/* Palette footer hint */}
-      <div className="p-3 border-t border-white/10 bg-white/[0.02]">
-        <p className="text-[10px] text-gray-600 text-center">
+      <div className="p-4 border-t border-white/10 bg-white/[0.02]">
+        <p className="text-xs text-gray-400 text-center">
           Drag devices onto the canvas to add them
         </p>
       </div>

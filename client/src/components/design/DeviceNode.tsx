@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback } from 'react';
+import React, { useRef } from 'react';
 import type { Device, BoardType } from '../../types/design';
 import { cn } from '../../lib/utils';
 import {
@@ -7,7 +7,6 @@ import {
   Server,
   Microchip,
   CircuitBoard,
-  MoreVertical,
   Link,
   Trash2,
   Copy,
@@ -41,55 +40,17 @@ interface DeviceNodeProps {
   device: Device;
   isSelected: boolean;
   onClick: (e: React.MouseEvent) => void;
-  onDrag: (delta: { x: number; y: number }) => void;
 }
 
 export const DeviceNode: React.FC<DeviceNodeProps> = ({
   device,
   isSelected,
   onClick,
-  onDrag,
 }) => {
   const nodeRef = useRef<HTMLDivElement>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
 
   const Icon = boardIcons[device.boardType] || Cpu;
   const colors = boardColors[device.boardType] || boardColors.esp32;
-
-  // Handle mouse down for dragging
-  const handleMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      if (e.button !== 0) return; // Only left click
-      e.stopPropagation();
-
-      setIsDragging(true);
-      setDragStart({ x: e.clientX, y: e.clientY });
-
-      const handleMouseMove = (moveEvent: MouseEvent) => {
-        if (!dragStart) return;
-
-        const delta = {
-          x: moveEvent.clientX - (dragStart?.x || e.clientX),
-          y: moveEvent.clientY - (dragStart?.y || e.clientY),
-        };
-
-        onDrag(delta);
-        setDragStart({ x: moveEvent.clientX, y: moveEvent.clientY });
-      };
-
-      const handleMouseUp = () => {
-        setIsDragging(false);
-        setDragStart(null);
-        window.removeEventListener('mousemove', handleMouseMove);
-        window.removeEventListener('mouseup', handleMouseUp);
-      };
-
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
-    },
-    [onDrag, dragStart]
-  );
 
   // Count enabled features
   const enabledFeatures = device.features.filter((f) => f.enabled).length;
@@ -98,17 +59,12 @@ export const DeviceNode: React.FC<DeviceNodeProps> = ({
     <div
       ref={nodeRef}
       className={cn(
-        'absolute w-20 h-20 cursor-pointer select-none',
+        'w-10 h-10 cursor-pointer select-none relative',
         'transition-transform duration-75',
-        isDragging && 'cursor-grabbing z-50'
+        'hover:scale-105',
+        'active:scale-95'
       )}
-      style={{
-        left: device.position.x,
-        top: device.position.y,
-        transform: isDragging ? 'scale(1.05)' : 'scale(1)',
-      }}
       onClick={onClick}
-      onMouseDown={handleMouseDown}
     >
       {/* Selection ring */}
       {isSelected && (
@@ -131,7 +87,7 @@ export const DeviceNode: React.FC<DeviceNodeProps> = ({
           colors.bg,
           colors.border,
           isSelected && 'border-blue-500',
-          !isDragging && 'hover:scale-105 hover:shadow-lg'
+          'hover:shadow-lg'
         )}
       >
         {/* Icon */}

@@ -352,8 +352,35 @@ class CloudStatus(BaseModel):
     outputs: Optional[TerraformOutputs] = None
 
 
+class NodeTelemetry(BaseModel):
+    """Real-time telemetry from a deployed node."""
+
+    node_id: str
+    status: str = "offline"  # "online" | "offline"
+    last_seen: Optional[datetime] = None
+    latest_readings: dict = Field(default_factory=dict)
+    ip_address: Optional[str] = None
+
+
 class DeployStatusResponse(BaseModel):
     """Deployment status."""
+
+    session_id: str
+    nodes: dict[str, NodeTelemetry] = Field(default_factory=dict)
+    server_online: bool = False
+    last_updated: Optional[str] = None
+
+
+class DeploySettingsRequest(BaseModel):
+    """Settings for deployment configuration."""
+
+    aws_region: str = "us-east-1"
+    instance_type: str = "t3.micro"
+    auto_destroy_hours: int = 2
+
+
+class LiveStatusResponse(BaseModel):
+    """Live system status response."""
 
     session_id: str
     nodes: dict[str, NodeTelemetry] = Field(default_factory=dict)

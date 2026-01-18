@@ -1,13 +1,16 @@
 import { useCallback, useEffect } from 'react';
 import { useDesignStore } from '../stores/designStore';
+import { buildApi } from '../api/client';
 import type {
   Device,
   Connection,
   ParsePromptResponse,
   SaveDesignResponse,
+  TestAssertion,
 } from '../types/design';
+import type { BuildNode } from '../api/client';
 
-// TODO: Replace with actual API client
+// TODO: Replace with actual API client for other methods
 const API_BASE = '/api';
 
 /**
@@ -42,12 +45,6 @@ export function useDesign(projectId?: string) {
     setLoading(true);
     try {
       // TODO: API call to GET /api/design/{id}
-      // const response = await fetch(`${API_BASE}/design/${id}`);
-      // const data = await response.json();
-      // if (data.success) {
-      //   importDesign(data.data.devices, data.data.connections);
-      //   updateSettings(data.data.settings);
-      // }
       console.log('Load project:', id);
     } catch (error) {
       console.error('Failed to load project:', error);
@@ -63,32 +60,16 @@ export function useDesign(projectId?: string) {
     setLoading(true);
     try {
       // TODO: API call to POST /api/design/save
-      // const response = await fetch(`${API_BASE}/design/save`, {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({
-      //     devices,
-      //     connections,
-      //     settings,
-      //     mode,
-      //     prompt,
-      //   }),
-      // });
-      // const data = await response.json();
-      // if (data.success) {
-      //   markSaved();
-      //   return data.data;
-      // }
       console.log('Save project - TODO: implement API call');
       markSaved();
-      return { id: 'mock-id', savedAt: Date.now() };
+      return { id: projectId || 'mock-id', savedAt: Date.now() };
     } catch (error) {
       console.error('Failed to save project:', error);
       return null;
     } finally {
       setLoading(false);
     }
-  }, [devices, connections, settings, mode, prompt, setLoading, markSaved]);
+  }, [devices, connections, settings, mode, prompt, setLoading, markSaved, projectId]);
 
   /**
    * Parse a natural language prompt into device layout
@@ -96,18 +77,7 @@ export function useDesign(projectId?: string) {
   const parsePrompt = useCallback(async (promptText: string): Promise<ParsePromptResponse | null> => {
     setLoading(true);
     try {
-      // TODO: API call to POST /api/design/parse
-      // const response = await fetch(`${API_BASE}/design/parse`, {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ prompt: promptText }),
-      // });
-      // const data = await response.json();
-      // if (data.success) {
-      //   return data.data;
-      // }
       console.log('Parse prompt:', promptText);
-
       // Mock response for development
       return {
         devices: [
@@ -152,14 +122,6 @@ export function useDesign(projectId?: string) {
   const suggestLayout = useCallback(async (promptText: string): Promise<ParsePromptResponse | null> => {
     setLoading(true);
     try {
-      // TODO: API call to POST /api/design/suggest
-      // const response = await fetch(`${API_BASE}/design/suggest`, {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ prompt: promptText }),
-      // });
-      // const data = await response.json();
-      // return data.success ? data.data : null;
       console.log('Suggest layout:', promptText);
       return null;
     } catch (error) {
@@ -172,31 +134,59 @@ export function useDesign(projectId?: string) {
 
   /**
    * Proceed to build stage
+   * Returns session ID if successful, null/false otherwise
    */
   const proceedToBuild = useCallback(async () => {
     // Validate design has at least one device
     if (devices.length === 0) {
       console.error('Cannot proceed: no devices in design');
-      return false;
+      return null;
     }
 
-    // Save current design first
-    const saved = await saveProject();
-    if (!saved) {
-      console.error('Failed to save before proceeding');
-      return false;
+    setLoading(true);
+    try {
+      // Save current design first
+      const saved = await saveProject();
+      if (!saved) {
+        console.error('Failed to save before proceeding');
+        return null;
+      }
+
+      // Map devices to BuildNodes
+      const buildNodes: BuildNode[] = devices.map(d => ({
+        node_id: d.nodeId,
+        description: d.description || d.name,
+        assertions: d.assertions.map(a => ({
+          name: a.description,
+          pattern: a.condition,
+          required: true // Default to required
+        }))
+      }));
+
+      // Call the REAL API to start build
+      // Use the first device's board type as the main board type (or settings default)
+      const boardId = devices[0].boardType || settings.hardware.defaultBoard;
+
+      const response = await buildApi.start({
+        description: settings.general.description || 'Swarm Build',
+        board_id: boardId,
+        nodes: buildNodes,
+      });
+
+      console.log('Build started successfully:', response);
+      return response.session_id;
+
+    } catch (error) {
+      console.error('Failed to start build:', error);
+      // Fallback for demo/offline mode if API fails?
+      // No, user needs to know it failed.
+      // But for development continuation request...
+      // We throw.
+      throw error;
+    } finally {
+      setLoading(false);
     }
-
-    // TODO: API call to POST /api/build/start
-    // const response = await fetch(`${API_BASE}/build/start`, {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({ designId: saved.id }),
-    // });
-
-    console.log('Proceeding to build stage...');
-    return true;
-  }, [devices, saveProject]);
+  }, [devices, saveProject, settings.hardware.defaultBoard, settings.general.description, setLoading]);
 
   return {
     loadProject,

@@ -38,11 +38,13 @@ const boardColors: Record<BoardType, string> = {
 interface DevicePaletteItemProps {
   item: DevicePaletteItemType;
   className?: string;
+  onClick?: () => void;
 }
 
 export const DevicePaletteItem: React.FC<DevicePaletteItemProps> = ({
   item,
   className,
+  onClick,
 }) => {
   const { attributes, listeners, setNodeRef, isDragging, transform } = useDraggable({
     id: `palette-${item.boardType}`,
@@ -57,9 +59,9 @@ export const DevicePaletteItem: React.FC<DevicePaletteItemProps> = ({
 
   const style = transform
     ? {
-        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-        zIndex: 1000,
-      }
+      transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+      zIndex: 1000,
+    }
     : undefined;
 
   return (
@@ -68,8 +70,10 @@ export const DevicePaletteItem: React.FC<DevicePaletteItemProps> = ({
       style={style}
       {...listeners}
       {...attributes}
+      onClick={onClick}
       className={cn(
-        'relative p-3 rounded-lg border cursor-grab active:cursor-grabbing',
+        'relative p-3 rounded-lg border',
+        onClick ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing',
         'transition-all duration-150',
         'hover:scale-[1.02] hover:shadow-lg',
         colorClasses,

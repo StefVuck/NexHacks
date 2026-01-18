@@ -29,16 +29,16 @@ const LandingPage = () => {
     }, []);
 
     return (
-        <div className="fixed inset-0 bg-[#0a0a0a] text-white font-sans selection:bg-blue-500/30 overflow-hidden">
+        <div className="fixed inset-0 bg-[#0a0a0a] text-white font-sans selection:bg-blue-500/30 overflow-hidden flex flex-col">
             {/* Globe Background */}
-            <div className="fixed inset-0 z-0 opacity-40">
+            <div className="absolute inset-0 z-0 opacity-40">
                 <Suspense fallback={<div className="w-full h-full bg-[#0a0a0a]" />}>
                     <GlobeViz width={dimensions.width} height={dimensions.height} />
                 </Suspense>
             </div>
 
             {/* Grid Background Overlay */}
-            <div className="fixed inset-0 z-0 opacity-[0.03] pointer-events-none"
+            <div className="absolute inset-0 z-0 opacity-[0.03] pointer-events-none"
                 style={{
                     backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px)',
                     backgroundSize: '50px 50px'
@@ -46,10 +46,10 @@ const LandingPage = () => {
             />
 
             {/* Vignette */}
-            <div className="fixed inset-0 z-0 pointer-events-none bg-[radial-gradient(circle_at_center,transparent_0%,rgba(10,10,10,0.9)_100%)]" />
+            <div className="absolute inset-0 z-0 pointer-events-none bg-[radial-gradient(circle_at_center,transparent_0%,rgba(10,10,10,0.9)_100%)]" />
 
             {/* Navigation */}
-            <nav className="relative z-20 flex items-center justify-between px-12 py-6 border-b border-white/[0.08] bg-black/40 backdrop-blur-md">
+            <nav className="relative z-20 flex-none flex items-center justify-between px-12 py-6 border-b border-white/[0.08] bg-black/40 backdrop-blur-md">
                 <div className="flex items-center gap-3">
                     <img src={heliosLogo} alt="Helios" className="w-15 h-12 object-contain" />
                     <span className="text-xl font-bold tracking-[0.02em] text-white"></span>
@@ -69,7 +69,7 @@ const LandingPage = () => {
             </nav>
 
             {/* Hero Section */}
-            <section className="relative z-10 h-full flex items-center justify-center px-12 pb-20 pt-10">
+            <section className="relative z-10 flex-1 flex items-center justify-center px-12 pb-20 pt-10">
                 <div className="max-w-6xl w-full">
                     {/* Status Badge */}
                     <motion.div

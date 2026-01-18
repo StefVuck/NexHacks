@@ -3,16 +3,16 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useDesignStore } from '../stores/designStore';
 import { useDesign, useAutoSave, useDesignKeyboard } from '../hooks/useDesign';
 import { AppHeader } from '../components/layout';
-import { DevicePalette } from '../components/design/DevicePalette';
 import { DesignCanvas } from '../components/design/DesignCanvas';
 import { DeviceConfigPanel } from '../components/design/DeviceConfigPanel';
-import { ModeSelector } from '../components/design/ModeSelector';
-import { PromptInput } from '../components/design/PromptInput';
 import { CanvasControls } from '../components/design/CanvasControls';
 import { SelectionToolbar } from '../components/design/SelectionToolbar';
 import { SettingsModal } from '../components/settings/SettingsModal';
+import { DevicePickerModal } from '../components/design/DevicePickerModal';
 import { Button } from '../components/ui/button';
-import { ArrowRight, Loader2 } from 'lucide-react';
+import { ArrowRight, Loader2, Plus } from 'lucide-react';
+
+const generateUUID = () => Math.random().toString(36).substr(2, 9);
 
 export const DesignPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -29,7 +29,7 @@ export const DesignPage: React.FC = () => {
   const completeStage = useDesignStore((state) => state.completeStage);
 
   // Hooks
-  const { loadProject, proceedToBuild } = useDesign(id);
+  const { proceedToBuild } = useDesign(id);
   useAutoSave();
   useDesignKeyboard();
 
@@ -45,43 +45,97 @@ export const DesignPage: React.FC = () => {
     }
   }, [id, setProjectId, navigate]);
 
+  // Modal state
+  const [devicePickerOpen, setDevicePickerOpen] = React.useState(false);
+  const addDevice = useDesignStore((state) => state.addDevice);
+
   // Handle proceed to build
   const handleProceedToBuild = async () => {
-    const success = await proceedToBuild();
-    if (success) {
-      completeStage('design');
-      // TODO: Navigate to build page when implemented
-      // navigate(`/build/${id}`);
-      console.log('Ready to navigate to build stage');
+    try {
+      const sessionId = await proceedToBuild();
+      if (sessionId) {
+        completeStage('design');
+        navigate(`/build/${sessionId}`);
+        console.log('Ready to navigate to build stage:', sessionId);
+      }
+    } catch (e) {
+      console.error("Failed to start build:", e);
+      // Optional: show toast error
     }
+  };
+
+  const canvasView = useDesignStore((state) => state.canvasView);
+
+  const handleDeviceSelect = (deviceItem: any) => {
+    // Add device to center of map (which is stored in canvasView.center as {x: lng, y: lat})
+    const position = {
+      x: canvasView.center.x || -79.9428,
+      y: canvasView.center.y || 40.4432
+    };
+
+    const newDeviceId = addDevice({
+      boardType: deviceItem.boardType,
+      nodeId: `${deviceItem.boardType}_${generateUUID()}`,
+      name: deviceItem.name,
+      description: deviceItem.description,
+      position: position,
+      features: deviceItem.defaultFeatures.map((f: any) => ({ ...f, id: generateUUID() })),
+      assertions: [],
+    });
+
+    // Auto-connect to the last added device (if any) for "laser chain" effect
+    // Grab existing devices BEFORE addDevice changed the list (state is updated async or we need fresh ref)
+    // Actually we need the list *excluding* the new one to find the 'previous' one.
+    // Since we just added it, if we get state it might include it or not depending on zustand batching.
+    // Safest is to rely on what we had.
+
+    // We already have 'existingDevices' from the store
+    // Since addDevice updated the store, the new device is the last one.
+    // We want the ONE BEFORE that.
+    const devices = useDesignStore.getState().devices;
+
+    if (devices.length >= 2) {
+      const previousDevice = devices[devices.length - 2];
+
+      useDesignStore.getState().addConnection({
+        fromDeviceId: previousDevice.id,
+        toDeviceId: newDeviceId,
+        protocol: 'mqtt', // Default protocol
+        label: 'LASER_LINK'
+      });
+    }
+
+    setDevicePickerOpen(false);
   };
 
   const selectedDevice = devices.find((d) => selectedDeviceIds[0] === d.id);
   const hasDevices = devices.length > 0;
 
   return (
-    <div className="h-screen w-screen flex flex-col bg-[#0a0a0a] overflow-hidden">
+    <div className="h-screen w-full flex flex-col bg-[#0a0a0a] text-white overflow-hidden">
       {/* Header */}
       <AppHeader />
 
       {/* Main content */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left sidebar: Device palette */}
-        <aside className="w-64 bg-[#121212] border-r border-white/10 flex flex-col">
-          <div className="p-4 border-b border-white/10">
-            <ModeSelector />
-          </div>
+        {/* Left sidebar: REMOVED, replaced by floating button */}
 
-          {mode === 'ai' && (
-            <div className="p-4 border-b border-white/10">
-              <PromptInput />
-            </div>
-          )}
+        {/* Floating Add Device Button */}
+        <div className="absolute top-4 left-4 z-20">
+          <Button
+            onClick={() => setDevicePickerOpen(true)}
+            className="bg-blue-600 hover:bg-blue-500 shadow-lg"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Device
+          </Button>
+        </div>
 
-          <div className="flex-1 overflow-hidden">
-            <DevicePalette />
-          </div>
-        </aside>
+        <DevicePickerModal
+          open={devicePickerOpen}
+          onOpenChange={setDevicePickerOpen}
+          onDeviceSelect={handleDeviceSelect}
+        />
 
         {/* Center: Canvas */}
         <main className="flex-1 relative">

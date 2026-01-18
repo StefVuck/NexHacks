@@ -99,6 +99,24 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ className }) => {
         };
 
         addDevice(newDevice);
+
+        // Auto-connect to the last added device (if any) for "laser chain" effect
+        // NOTE: addDevice is synchronous, so we can fetch the state immediately.
+        // The new device is now the last one in the list.
+        const devices = useDesignStore.getState().devices;
+
+        if (devices.length >= 2) {
+          // Connect the previous device (N-2) to the new one (N-1)
+          const previousDevice = devices[devices.length - 2];
+          const newDeviceFromStore = devices[devices.length - 1]; // This should match our newDevice but has the real ID
+
+          useDesignStore.getState().addConnection({
+            fromDeviceId: previousDevice.id,
+            toDeviceId: newDeviceFromStore.id,
+            protocol: 'mqtt',
+            label: 'LASER_LINK'
+          });
+        }
       }
     }
   };
@@ -142,14 +160,14 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ className }) => {
             mapboxAccessToken={MAPBOX_TOKEN}
             onMove={handleViewChange}
             interactive={true}
-          />
+          >
+            {/* Connection layer (SVG lines between devices) */}
+            <ConnectionLayer />
+
+            {/* Device layer (nodes) */}
+            <DeviceLayer />
+          </Map>
         </div>
-
-        {/* Connection layer (SVG lines between devices) */}
-        <ConnectionLayer />
-
-        {/* Device layer (nodes) */}
-        <DeviceLayer />
 
         {/* Drag overlay for smooth dragging feedback */}
         <DragOverlay>

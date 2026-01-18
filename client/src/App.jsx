@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Map from './components/Map';
 import LandingPage from './pages/LandingPage';
@@ -11,18 +11,16 @@ import { Moon, Sun, Loader2 } from "lucide-react";
 // Lazy load Build and Simulate pages
 const BuildPage = lazy(() => import('./pages/BuildPage'));
 const SimulatePage = lazy(() => import('./pages/SimulatePage'));
+const DeployPage = lazy(() => import('./pages/DeployPage'));
 
 // Loading fallback component
 function PageLoader() {
   return (
-    <div className="min-h-screen bg-[#121212] flex items-center justify-center">
+    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
       <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
     </div>
   );
 }
-
-// Lazy load DeployPage for better initial load
-const DeployPage = lazy(() => import('./pages/DeployPage'));
 
 // Simple Map App Component
 function MapApp() {
@@ -67,32 +65,21 @@ function MapApp() {
   );
 }
 
-// Loading fallback for lazy-loaded pages
-function PageLoader() {
-  return (
-    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-      <div className="text-center">
-        <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-        <p className="text-gray-400 text-sm">Loading...</p>
-      </div>
-    </div>
-  );
-}
-
 // Main App with Routing
 function App() {
   return (
     <Router>
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/app" element={<Navigate to="/design" replace />} />
-        <Route path="/design" element={<Navigate to={`/design/new-${Date.now()}`} replace />} />
-        <Route path="/design/:id" element={<DesignPage />} />
-        {/* TODO: Add Build, Simulate, Deploy routes when implemented */}
-        {/* <Route path="/build/:id" element={<BuildPage />} /> */}
-        {/* <Route path="/simulate/:id" element={<SimulatePage />} /> */}
-        {/* <Route path="/deploy/:id" element={<DeployPage />} /> */}
-      </Routes>
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/app" element={<Navigate to="/design" replace />} />
+          <Route path="/design" element={<Navigate to={`/design/new-${Date.now()}`} replace />} />
+          <Route path="/design/:id" element={<DesignPage />} />
+          <Route path="/build/:id" element={<BuildPage />} />
+          <Route path="/simulate/:id" element={<SimulatePage />} />
+          <Route path="/deploy/:id" element={<DeployPage />} />
+        </Routes>
+      </Suspense>
     </Router>
   );
 }
