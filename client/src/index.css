@@ -41,7 +41,8 @@
 
   body {
     @apply bg-background text-foreground text-[15px];
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Alliance No 2', Inter, sans-serif;
+    -webkit-font-smoothing: antialiased;
   }
 }
 
