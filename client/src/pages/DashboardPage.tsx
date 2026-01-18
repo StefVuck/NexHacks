@@ -19,28 +19,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { useWoodwide } from '@/hooks/useWoodwide';
 
-// --- Mock Data ---
-
-const analyticsData = [
-    { name: '00:00', value: 240, cpu: 12 },
-    { name: '04:00', value: 300, cpu: 18 },
-    { name: '08:00', value: 500, cpu: 45 },
-    { name: '12:00', value: 450, cpu: 38 },
-    { name: '16:00', value: 600, cpu: 55 },
-    { name: '20:00', value: 400, cpu: 30 },
-    { name: '23:59', value: 350, cpu: 22 },
-];
-
-const processes = [
-    { pid: 1024, name: 'helios_core.d', cpu: '12.4%', mem: '140MB', status: 'RUNNING' },
-    { pid: 1025, name: 'node_listener', cpu: '0.8%', mem: '45MB', status: 'SLEEP' },
-    { pid: 1026, name: 'telemetry_stream', cpu: '4.2%', mem: '210MB', status: 'RUNNING' },
-    { pid: 1027, name: 'kernel_task', cpu: '0.1%', mem: '12MB', status: 'IDLE' },
-];
-
 // --- Components ---
 
-const NetworkGraph: React.FC = () => {
+const NetworkGraph: React.FC<{ nodeCount: number }> = ({ nodeCount }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const rotationRef = useRef({ x: 0, y: 0 });
     const isDraggingRef = useRef(false);
@@ -57,9 +38,9 @@ const NetworkGraph: React.FC = () => {
         let height = canvas.height = canvas.offsetHeight;
 
         const nodes: { x: number; y: number; z: number }[] = [];
-        const nodeCount = 12;
+        const actualNodeCount = nodeCount || 5;
 
-        for (let i = 0; i < nodeCount; i++) {
+        for (let i = 0; i < actualNodeCount; i++) {
             nodes.push({
                 x: (Math.random() - 0.5) * 2,
                 y: (Math.random() - 0.5) * 2,
@@ -101,8 +82,8 @@ const NetworkGraph: React.FC = () => {
             }));
 
             // Connections
-            for (let i = 0; i < nodeCount; i++) {
-                for (let j = i + 1; j < nodeCount; j++) {
+            for (let i = 0; i < actualNodeCount; i++) {
+                for (let j = i + 1; j < actualNodeCount; j++) {
                     const dx = nodes[i].x - nodes[j].x;
                     const dy = nodes[i].y - nodes[j].y;
                     const dz = nodes[i].z - nodes[j].z;
@@ -175,7 +156,7 @@ const NetworkGraph: React.FC = () => {
             window.removeEventListener('mouseup', handleMouseUp);
             cancelAnimationFrame(animationFrameId);
         };
-    }, []);
+    }, [nodeCount]);
 
     return <canvas ref={canvasRef} className="w-full h-full block cursor-move" />;
 };
@@ -528,19 +509,106 @@ export const DashboardPage: React.FC = () => {
                     {/* Bottom Graph: Network Traffic */}
                     <Panel title="Network I/O Stream" className="flex-1">
                         <div className="h-full w-full bg-[#000] p-2 relative">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <LineChart data={analyticsData}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
-                                    <XAxis dataKey="name" fontSize={10} stroke="#444" tickLine={false} axisLine={false} tick={{ fill: '#666' }} />
-                                    <YAxis fontSize={10} stroke="#444" tickLine={false} axisLine={false} tick={{ fill: '#666' }} />
-                                    <Tooltip
-                                        cursor={{ stroke: '#444', strokeWidth: 1 }}
-                                        contentStyle={{ backgroundColor: '#000', border: '1px solid #fff', fontSize: '10px', fontFamily: 'monospace', color: '#fff' }}
-                                    />
-                                    <Line type="step" dataKey="value" stroke="#fff" strokeWidth={1.5} dot={false} activeDot={{ r: 4, fill: '#fff' }} />
-                                    <Line type="monotone" dataKey="cpu" stroke="#444" strokeWidth={1} dot={false} />
-                                </LineChart>
-                            </ResponsiveContainer>
+                            <div className="absolute top-2 right-2 text-[8px] text-gray-500 font-mono border border-[#333] bg-black px-2 py-1 space-y-0.5 z-10">
+                                <div><span className="text-cyan-400">━</span> Speed (km/h)</div>
+                                <div><span className="text-fuchsia-400">━</span> Density (%)</div>
+                                <div><span className="text-yellow-400">━</span> Congestion</div>
+                            </div>
+                            {(() => {
+                                // Process readings into time-series data
+                                // Group by time buckets and calculate averages
+                                const getTimeSeriesData = () => {
+                                    if (readings.length === 0) {
+                                        return [
+                                            { time: 'No Data', speed: 0, density: 0, congestion: 0 }
+                                        ];
+                                    }
+
+                                    // Group readings by node and take last 10 readings per node
+                                    const nodeMap = new Map<string, typeof readings>();
+                                    readings.forEach(reading => {
+                                        if (!nodeMap.has(reading.node_id)) {
+                                            nodeMap.set(reading.node_id, []);
+                                        }
+                                        nodeMap.get(reading.node_id)!.push(reading);
+                                    });
+
+                                    // Get last 15 time points from all readings
+                                    const allReadings = [...readings].sort((a, b) => a.timestamp - b.timestamp);
+                                    const recentReadings = allReadings.slice(-15);
+
+                                    return recentReadings.map((reading, idx) => {
+                                        const date = new Date(reading.timestamp);
+                                        const timeStr = `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}`;
+
+                                        return {
+                                            time: timeStr,
+                                            speed: reading.average_speed_kmh || 0,
+                                            density: reading.traffic_density_percent || 0,
+                                            congestion: (reading.congestion_level || 0) * 25, // Scale to 0-100
+                                        };
+                                    });
+                                };
+
+                                const chartData = getTimeSeriesData();
+
+                                return (
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <LineChart data={chartData}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
+                                            <XAxis
+                                                dataKey="time"
+                                                fontSize={8}
+                                                stroke="#444"
+                                                tickLine={false}
+                                                axisLine={false}
+                                                tick={{ fill: '#666' }}
+                                                angle={-45}
+                                                textAnchor="end"
+                                                height={40}
+                                            />
+                                            <YAxis
+                                                fontSize={10}
+                                                stroke="#444"
+                                                tickLine={false}
+                                                axisLine={false}
+                                                tick={{ fill: '#666' }}
+                                            />
+                                            <Tooltip
+                                                cursor={{ stroke: '#444', strokeWidth: 1 }}
+                                                contentStyle={{ backgroundColor: '#000', border: '1px solid #fff', fontSize: '10px', fontFamily: 'monospace', color: '#fff' }}
+                                            />
+                                            <Line
+                                                type="monotone"
+                                                dataKey="speed"
+                                                stroke="#0ff"
+                                                strokeWidth={1.5}
+                                                dot={false}
+                                                activeDot={{ r: 3, fill: '#0ff' }}
+                                                name="Speed (km/h)"
+                                            />
+                                            <Line
+                                                type="monotone"
+                                                dataKey="density"
+                                                stroke="#f0f"
+                                                strokeWidth={1.5}
+                                                dot={false}
+                                                activeDot={{ r: 3, fill: '#f0f' }}
+                                                name="Density (%)"
+                                            />
+                                            <Line
+                                                type="monotone"
+                                                dataKey="congestion"
+                                                stroke="#ff0"
+                                                strokeWidth={2}
+                                                dot={false}
+                                                activeDot={{ r: 3, fill: '#ff0' }}
+                                                name="Congestion"
+                                            />
+                                        </LineChart>
+                                    </ResponsiveContainer>
+                                );
+                            })()}
                         </div>
                     </Panel>
                 </div>
@@ -615,9 +683,9 @@ export const DashboardPage: React.FC = () => {
 
                     <Panel title="Network Topology" className="flex-1">
                         <div className="w-full h-full bg-[#000] relative group">
-                            <NetworkGraph />
+                            <NetworkGraph nodeCount={stats?.nodes || 5} />
                             <div className="absolute top-2 right-2 text-[9px] text-gray-500 font-mono border border-[#333] bg-black px-1">
-                                NODES: 12 ONLINE
+                                NODES: {stats?.nodes || 0} ONLINE
                             </div>
                         </div>
                     </Panel>
